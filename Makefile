@@ -1,25 +1,38 @@
+_VERSION = 0.8-dev
+VERSION  = `git describe --tags --dirty 2>/dev/null || echo $(_VERSION)`
+
+PKG_CONFIG = pkg-config
+
+# paths
+PREFIX = /usr/local
+MANDIR = $(PREFIX)/share/man
+DATADIR = $(PREFIX)/share
+
+WLR_INCS = `$(PKG_CONFIG) --cflags wlroots-0.19`
+WLR_LIBS = `$(PKG_CONFIG) --libs wlroots-0.19`
+
+CC = cc
+
 .POSIX:
 .SUFFIXES:
 
-include config.mk
-
 # flags for compiling
 DWLCPPFLAGS = -I. -DWLR_USE_UNSTABLE -D_POSIX_C_SOURCE=200809L \
-	-DVERSION=\"$(VERSION)\" $(XWAYLAND)
+	-DVERSION=\"$(VERSION)\"
 DWLDEVCFLAGS = -g -Wpedantic -Wall -Wextra -Wdeclaration-after-statement \
 	-Wno-unused-parameter -Wshadow -Wunused-macros -Werror=strict-prototypes \
 	-Werror=implicit -Werror=return-type -Werror=incompatible-pointer-types \
 	-Wfloat-conversion
 
 # CFLAGS / LDFLAGS
-PKGS      = wayland-server xkbcommon libinput $(XLIBS)
+PKGS      = wayland-server xkbcommon libinput
 DWLCFLAGS = `$(PKG_CONFIG) --cflags $(PKGS)` $(WLR_INCS) $(DWLCPPFLAGS) $(DWLDEVCFLAGS) $(CFLAGS)
 LDLIBS    = `$(PKG_CONFIG) --libs $(PKGS)` $(WLR_LIBS) -lm $(LIBS)
 
 all: dwl
 dwl: dwl.o util.o
 	$(CC) dwl.o util.o $(DWLCFLAGS) $(LDFLAGS) $(LDLIBS) -o $@
-dwl.o: dwl.c client.h config.h config.mk cursor-shape-v1-protocol.h \
+dwl.o: mydwl.c client.h config.h cursor-shape-v1-protocol.h \
 	pointer-constraints-unstable-v1-protocol.h wlr-layer-shell-unstable-v1-protocol.h \
 	wlr-output-power-management-unstable-v1-protocol.h xdg-shell-protocol.h
 util.o: util.c util.h
@@ -59,21 +72,17 @@ dist: clean
 	tar -caf dwl-$(VERSION).tar.gz dwl-$(VERSION)
 	rm -rf dwl-$(VERSION)
 
-install: dwl
+install: mydwl
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
-	rm -f $(DESTDIR)$(PREFIX)/bin/dwl
-	cp -f dwl $(DESTDIR)$(PREFIX)/bin
-	chmod 755 $(DESTDIR)$(PREFIX)/bin/dwl
-	mkdir -p $(DESTDIR)$(MANDIR)/man1
-	cp -f dwl.1 $(DESTDIR)$(MANDIR)/man1
-	chmod 644 $(DESTDIR)$(MANDIR)/man1/dwl.1
+	rm -f $(DESTDIR)$(PREFIX)/bin/mydwl
+	cp -f dwl $(DESTDIR)$(PREFIX)/mybin
+	chmod 755 $(DESTDIR)$(PREFIX)/bin/mydwl
 	mkdir -p $(DESTDIR)$(DATADIR)/wayland-sessions
-	cp -f dwl.desktop $(DESTDIR)$(DATADIR)/wayland-sessions/dwl.desktop
-	chmod 644 $(DESTDIR)$(DATADIR)/wayland-sessions/dwl.desktop
+	cp -f dwl.desktop $(DESTDIR)$(DATADIR)/wayland-sessions/mydwl.desktop
+	chmod 644 $(DESTDIR)$(DATADIR)/wayland-sessions/mydwl.desktop
 uninstall:
-	rm -f $(DESTDIR)$(PREFIX)/bin/dwl $(DESTDIR)$(MANDIR)/man1/dwl.1 \
-		$(DESTDIR)$(DATADIR)/wayland-sessions/dwl.desktop
+		$(DESTDIR)$(DATADIR)/wayland-sessions/mydwl.desktop
 
 .SUFFIXES: .c .o
 .c.o:
-	$(CC) $(CPPFLAGS) $(DWLCFLAGS) -o $@ -c $<
+	$(CC) $(CPPFLAGS) $(DWLCFLAGS) -o $@ -c $
