@@ -75,6 +75,7 @@
 
 enum { CurNormal, CurPressed, CurMove, CurResize };
 enum { LyrBg, LyrBottom, LyrTile, LyrFloat, LyrTop, LyrFS, LyrOverlay, LyrBlock, NUM_LAYERS };
+enum { XDGShell, LayerShell }; /* identificadores de tipo de cliente, usados en c->type */
 
 typedef union {
 	int i;
@@ -269,7 +270,6 @@ static Client *focustop(Monitor *m);
 static void fullscreennotify(struct wl_listener *listener, void *data);
 static void gpureset(struct wl_listener *listener, void *data);
 static void handlesig(int signo);
-static void incnmaster(const Arg *arg);
 static void inputdevice(struct wl_listener *listener, void *data);
 static int keybinding(uint32_t mods, xkb_keysym_t sym);
 static void keypress(struct wl_listener *listener, void *data);
@@ -279,7 +279,6 @@ static void killclient(const Arg *arg);
 static void locksession(struct wl_listener *listener, void *data);
 static void mapnotify(struct wl_listener *listener, void *data);
 static void maximizenotify(struct wl_listener *listener, void *data);
-static void monocle(Monitor *m);
 static void motionabsolute(struct wl_listener *listener, void *data);
 static void motionnotify(uint32_t time, struct wlr_input_device *device, double sx,
 		double sy, double sx_unaccel, double sy_unaccel);
@@ -303,7 +302,6 @@ static void setcursor(struct wl_listener *listener, void *data);
 static void setcursorshape(struct wl_listener *listener, void *data);
 static void setfloating(Client *c, int floating);
 static void setfullscreen(Client *c, int fullscreen);
-static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
 static void setmon(Client *c, Monitor *m, uint32_t newtags);
 static void setpsel(struct wl_listener *listener, void *data);
@@ -314,7 +312,6 @@ static void startdrag(struct wl_listener *listener, void *data);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void tile(Monitor *m);
-static void togglefloating(const Arg *arg);
 static void togglefullscreen(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
@@ -1412,15 +1409,6 @@ handlesig(int signo)
 }
 
 void
-incnmaster(const Arg *arg)
-{
-	if (!arg || !selmon)
-		return;
-	selmon->nmaster = MAX(selmon->nmaster + arg->i, 0);
-	arrange(selmon);
-}
-
-void
 inputdevice(struct wl_listener *listener, void *data)
 {
 	struct wlr_input_device *device = data;
@@ -1625,24 +1613,6 @@ maximizenotify(struct wl_listener *listener, void *data)
 			&& wl_resource_get_version(c->surface.xdg->toplevel->resource)
 					< XDG_TOPLEVEL_WM_CAPABILITIES_SINCE_VERSION)
 		wlr_xdg_surface_schedule_configure(c->surface.xdg);
-}
-
-void
-monocle(Monitor *m)
-{
-	Client *c;
-	int n = 0;
-
-	wl_list_for_each(c, &clients, link) {
-		if (!VISIBLEON(c, m) || c->isfloating || c->isfullscreen)
-			continue;
-		resize(c, m->w, 0);
-		n++;
-	}
-	if (n)
-		snprintf(m->ltsymbol, LENGTH(m->ltsymbol), "[%d]", n);
-	if ((c = focustop(m)))
-		wlr_scene_node_raise_to_top(&c->scene->node);
 }
 
 void
@@ -2096,20 +2066,6 @@ setfullscreen(Client *c, int fullscreen)
 }
 
 void
-setlayout(const Arg *arg)
-{
-	if (!selmon)
-		return;
-	if (!arg || !arg->v || arg->v != selmon->lt[selmon->sellt])
-		selmon->sellt ^= 1;
-	if (arg && arg->v)
-		selmon->lt[selmon->sellt] = (Layout *)arg->v;
-	strncpy(selmon->ltsymbol, selmon->lt[selmon->sellt]->symbol, LENGTH(selmon->ltsymbol));
-	arrange(selmon);
-	printstatus();
-}
-
-void
 setmfact(const Arg *arg)
 {
 	float f;
@@ -2379,15 +2335,6 @@ tile(Monitor *m)
 		}
 		i++;
 	}
-}
-
-void
-togglefloating(const Arg *arg)
-{
-	Client *sel = focustop(selmon);
-	/* return if fullscreen */
-	if (sel && !sel->isfullscreen)
-		setfloating(sel, !sel->isfloating);
 }
 
 void

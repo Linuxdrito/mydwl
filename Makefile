@@ -29,10 +29,10 @@ PKGS      = wayland-server xkbcommon libinput
 DWLCFLAGS = `$(PKG_CONFIG) --cflags $(PKGS)` $(WLR_INCS) $(DWLCPPFLAGS) $(DWLDEVCFLAGS) $(CFLAGS)
 LDLIBS    = `$(PKG_CONFIG) --libs $(PKGS)` $(WLR_LIBS) -lm $(LIBS)
 
-all: dwl
-dwl: dwl.o util.o
-	$(CC) dwl.o util.o $(DWLCFLAGS) $(LDFLAGS) $(LDLIBS) -o $@
-dwl.o: mydwl.c client.h config.h cursor-shape-v1-protocol.h \
+all: mydwl
+mydwl: mydwl.o util.o
+	$(CC) mydwl.o util.o $(DWLCFLAGS) $(LDFLAGS) $(LDLIBS) -o $@
+mydwl.o: mydwl.c client.h config.h cursor-shape-v1-protocol.h \
 	pointer-constraints-unstable-v1-protocol.h wlr-layer-shell-unstable-v1-protocol.h \
 	wlr-output-power-management-unstable-v1-protocol.h xdg-shell-protocol.h
 util.o: util.c util.h
@@ -62,15 +62,15 @@ xdg-shell-protocol.h:
 config.h:
 	cp config.def.h $@
 clean:
-	rm -f dwl *.o *-protocol.h
+	rm -f mydwl *.o *-protocol.h
 
 dist: clean
-	mkdir -p dwl-$(VERSION)
-	cp -R LICENSE* Makefile CHANGELOG.md README.md client.h config.def.h \
-		config.mk protocols dwl.1 dwl.c util.c util.h dwl.desktop \
-		dwl-$(VERSION)
+	mkdir -p mydwl-$(VERSION)
+	cp -R Makefile client.h config.def.h \
+		config.mk protocols mydwl.c util.c util.h dwl.desktop \
+		mydwl-$(VERSION)
 	tar -caf dwl-$(VERSION).tar.gz dwl-$(VERSION)
-	rm -rf dwl-$(VERSION)
+	rm -rf mydwl-$(VERSION)
 
 install: mydwl
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
@@ -85,4 +85,4 @@ uninstall:
 
 .SUFFIXES: .c .o
 .c.o:
-	$(CC) $(CPPFLAGS) $(DWLCFLAGS) -o $@ -c $
+	$(CC) $(CPPFLAGS) $(DWLCFLAGS) -o $@ -c $<
