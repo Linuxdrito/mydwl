@@ -1,18 +1,12 @@
-static inline int
-client_is_x11(Client *c)
-{
+static inline int client_is_x11(Client *c){
 	return 0;
 }
 
-static inline struct wlr_surface *
-client_surface(Client *c)
-{
+static inline struct wlr_surface * client_surface(Client *c){
 	return c->surface.xdg->surface;
 }
 
-static inline int
-toplevel_from_wlr_surface(struct wlr_surface *s, Client **pc, LayerSurface **pl)
-{
+static inline int toplevel_from_wlr_surface(struct wlr_surface *s, Client **pc, LayerSurface **pl){
 	struct wlr_xdg_surface *xdg_surface, *tmp_xdg_surface;
 	struct wlr_surface *root_surface;
 	struct wlr_layer_surface_v1 *layer_surface;
@@ -63,17 +57,13 @@ end:
 }
 
 /* The others */
-static inline void
-client_activate_surface(struct wlr_surface *s, int activated)
-{
+static inline void client_activate_surface(struct wlr_surface *s, int activated){
 	struct wlr_xdg_toplevel *toplevel;
 	if ((toplevel = wlr_xdg_toplevel_try_from_wlr_surface(s)))
 		wlr_xdg_toplevel_set_activated(toplevel, activated);
 }
 
-static inline uint32_t
-client_set_bounds(Client *c, int32_t width, int32_t height)
-{
+static inline uint32_t client_set_bounds(Client *c, int32_t width, int32_t height){
 	if (wl_resource_get_version(c->surface.xdg->toplevel->resource) >=
 			XDG_TOPLEVEL_CONFIGURE_BOUNDS_SINCE_VERSION && width >= 0 && height >= 0
 			&& (c->bounds.width != width || c->bounds.height != height)) {
@@ -84,15 +74,11 @@ client_set_bounds(Client *c, int32_t width, int32_t height)
 	return 0;
 }
 
-static inline const char *
-client_get_appid(Client *c)
-{
+static inline const char * client_get_appid(Client *c){
 	return c->surface.xdg->toplevel->app_id ? c->surface.xdg->toplevel->app_id : "broken";
 }
 
-static inline void
-client_get_clip(Client *c, struct wlr_box *clip)
-{
+static inline void client_get_clip(Client *c, struct wlr_box *clip){
 	*clip = (struct wlr_box){
 		.x = 0,
 		.y = 0,
@@ -104,38 +90,26 @@ client_get_clip(Client *c, struct wlr_box *clip)
 	clip->y = c->surface.xdg->geometry.y;
 }
 
-static inline void
-client_get_geometry(Client *c, struct wlr_box *geom)
-{
+static inline void client_get_geometry(Client *c, struct wlr_box *geom){
 	*geom = c->surface.xdg->geometry;
 }
 
-static inline Client *
-client_get_parent(Client *c)
-{
+static inline Client * client_get_parent(Client *c){
 	Client *p = NULL;
 	if (c->surface.xdg->toplevel->parent)
 		toplevel_from_wlr_surface(c->surface.xdg->toplevel->parent->base->surface, &p, NULL);
 	return p;
 }
 
-static inline int
-client_has_children(Client *c)
-{
-	/* surface.xdg->link is never empty because it always contains at least the
-	 * surface itself. */
+static inline int client_has_children(Client *c){
 	return wl_list_length(&c->surface.xdg->link) > 1;
 }
 
-static inline const char *
-client_get_title(Client *c)
-{
+static inline const char * client_get_title(Client *c){
 	return c->surface.xdg->toplevel->title ? c->surface.xdg->toplevel->title : "broken";
 }
 
-static inline int
-client_is_float_type(Client *c)
-{
+static inline int client_is_float_type(Client *c){
 	struct wlr_xdg_toplevel *toplevel;
 	struct wlr_xdg_toplevel_state state;
 
@@ -146,9 +120,7 @@ client_is_float_type(Client *c)
 			|| state.min_height == state.max_height));
 }
 
-static inline int
-client_is_rendered_on_mon(Client *c, Monitor *m)
-{
+static inline int client_is_rendered_on_mon(Client *c, Monitor *m){
 	struct wlr_surface_output *s;
 	int unused_lx, unused_ly;
 	if (!wlr_scene_node_coords(&c->scene->node, &unused_lx, &unused_ly))
@@ -159,9 +131,7 @@ client_is_rendered_on_mon(Client *c, Monitor *m)
 	return 0;
 }
 
-static inline int
-client_is_stopped(Client *c)
-{
+static inline int client_is_stopped(Client *c){
 	int pid;
 	siginfo_t in = {0};
 
@@ -179,15 +149,11 @@ client_is_stopped(Client *c)
 	return 0;
 }
 
-static inline int
-client_is_unmanaged(Client *c)
-{
+static inline int client_is_unmanaged(Client *c){
 	return 0;
 }
 
-static inline void
-client_notify_enter(struct wlr_surface *s, struct wlr_keyboard *kb)
-{
+static inline void client_notify_enter(struct wlr_surface *s, struct wlr_keyboard *kb){
 	if (kb)
 		wlr_seat_keyboard_notify_enter(seat, s, kb->keycodes,
 				kb->num_keycodes, &kb->modifiers);
@@ -195,45 +161,32 @@ client_notify_enter(struct wlr_surface *s, struct wlr_keyboard *kb)
 		wlr_seat_keyboard_notify_enter(seat, s, NULL, 0, NULL);
 }
 
-static inline void
-client_send_close(Client *c)
-{
+static inline void client_send_close(Client *c){
 	wlr_xdg_toplevel_send_close(c->surface.xdg->toplevel);
 }
 
-static inline void
-client_set_border_color(Client *c, const float color[static 4])
-{
+static inline void client_set_border_color(Client *c, const float color[static 4]){
 	int i;
 	for (i = 0; i < 4; i++)
 		wlr_scene_rect_set_color(c->border[i], color);
 }
 
-static inline void
-client_set_fullscreen(Client *c, int fullscreen)
-{
+static inline void client_set_fullscreen(Client *c, int fullscreen){
 	wlr_xdg_toplevel_set_fullscreen(c->surface.xdg->toplevel, fullscreen);
 }
 
-static inline void
-client_set_scale(struct wlr_surface *s, float scale)
-{
-	wlr_fractional_scale_v1_notify_scale(s, scale);
+static inline void client_set_scale(struct wlr_surface *s, float scale){
 	wlr_surface_set_preferred_buffer_scale(s, (int32_t)ceilf(scale));
 }
 
-static inline uint32_t
-client_set_size(Client *c, uint32_t width, uint32_t height)
-{
+static inline uint32_t client_set_size(Client *c, uint32_t width, uint32_t height){
 	if ((int32_t)width == c->surface.xdg->toplevel->current.width
 			&& (int32_t)height == c->surface.xdg->toplevel->current.height)
 		return 0;
 	return wlr_xdg_toplevel_set_size(c->surface.xdg->toplevel, (int32_t)width, (int32_t)height);
 }
 
-static inline void
-client_set_tiled(Client *c, uint32_t edges)
-{
+static inline void client_set_tiled(Client *c, uint32_t edges){
 	if (wl_resource_get_version(c->surface.xdg->toplevel->resource)
 			>= XDG_TOPLEVEL_STATE_TILED_RIGHT_SINCE_VERSION) {
 		wlr_xdg_toplevel_set_tiled(c->surface.xdg->toplevel, edges);
@@ -242,20 +195,14 @@ client_set_tiled(Client *c, uint32_t edges)
 	}
 }
 
-static inline void
-client_set_suspended(Client *c, int suspended)
-{
+static inline void client_set_suspended(Client *c, int suspended){
 	wlr_xdg_toplevel_set_suspended(c->surface.xdg->toplevel, suspended);
 }
 
-static inline int
-client_wants_focus(Client *c)
-{
+static inline int client_wants_focus(Client *c){
 	return 0;
 }
 
-static inline int
-client_wants_fullscreen(Client *c)
-{
+static inline int client_wants_fullscreen(Client *c){
 	return c->surface.xdg->toplevel->requested.fullscreen;
 }

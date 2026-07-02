@@ -7,7 +7,7 @@
 static const int sloppyfocus               = 0;  /* El mouse cambia el focus de las ventanas */
 static const int bypass_surface_visibility = 0;  /* 1 means idle inhibitors will disable idle tracking even if it's surface isn't visible  */
 static const unsigned int borderpx         = 2;  /* bordes de las ventanas */
-static const float rootcolor[]             = COLOR(0x222222ff);
+static const float rootcolor[]             = COLOR(0x000000ff);
 static const float bordercolor[]           = COLOR(0x666666ff);
 static const float focuscolor[]            = COLOR(0xffffffff);
 static const float urgentcolor[]           = COLOR(0xff0000ff);
@@ -21,12 +21,6 @@ static const float fullscreen_bg[]         = {0.1f, 0.1f, 0.1f, 1.0f}; /* You ca
 static int log_level = WLR_ERROR;
 
 /* NOTE: ALWAYS keep a rule declared even if you don't use rules (e.g leave at least one example) */
-static const Rule rules[] = {
-	/* app_id             title       tags mask     isfloating   monitor */
-	/* examples: */
-	{ "Gimp_EXAMPLE",     NULL,       0,            1,           -1 }, /* Start on currently visible tags floating, not tiled */
-	{ "firefox_EXAMPLE",  NULL,       1 << 8,       0,           -1 }, /* Start on ONLY tag "9" */
-};
 
 /* layout(s) */
 static const Layout layouts[] = {
@@ -120,45 +114,51 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 static const char *termcmd[] = { "footclient", NULL };
 static const char *termcmd2[] = { "foot", NULL };
 static const char *browsercmd[] = { "/home/pedrito/thorium-browser.AppImage", "--enable-features=UseOzonePlatform", "--ozone-platform=wayland", "--use-gl=angle", "--enable-features=VaapiVideoDecoder", "--ignore-gpu-blocklist", "--disbale-features=UseChromeOSDirectVideoDecoder" , "--process-per-site" , "--disable-background-networking" ,NULL };
+static const char *volup[]    = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%+", NULL };
+static const char *voldown[]  = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-", NULL };
+static const char *volmute[]  = { "wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle", NULL };
+static const char *brightup[] = { "brightnessctl", "set", "5%+", NULL };
+static const char *brightdn[] = { "brightnessctl", "set", "5%-", NULL };
+static const char *screenshotcmd[] = { "/home/pedrito/screenshot.sh", NULL };
+static const char *moodnight[] = { "brightnessctl", "set", "1", NULL };
+
+static const Button buttons[] = {
+	/* modifier                  button               function        argument */
+	{ 0,                         0,                   NULL,           {0} },
+};
+
+static const Rule rules[] = {
+	/* app_id             title       tags mask     isfloating   monitor */
+	/* examples: */
+	{ NULL,  NULL,       0,       0,           -1 }, /* Start on ONLY tag "9" */
+};
 
 static const Key keys[] = {
 	/* Note that Shift changes certain key codes: c -> C, 2 -> at, etc. */
 	/* modifier                  key                 function        argument */
-	{ MODKEY,                    XKB_KEY_Return,     spawn,          {.v = termcmd} },
-	{ MODKEY,                    XKB_KEY_o,          spawn,          {.v = termcmd2} },
-	{ MODKEY,                    XKB_KEY_t,          spawn,          {.v =  browsercmd} },
-	{ MODKEY,                    XKB_KEY_Down,       focusstack,     {.i = +1} },
-	{ MODKEY,                    XKB_KEY_Up,         focusstack,     {.i = -1} },
-	{ MODKEY,                    XKB_KEY_Left,       setmfact,       {.f = -0.05f} },
-	{ MODKEY,                    XKB_KEY_Right,      setmfact,       {.f = +0.05f} },
-	{ MODKEY,                    XKB_KEY_z,          zoom,           {0} },
-	{ MODKEY,                    XKB_KEY_Tab,        view,           {0} },
-	{ MODKEY,                    XKB_KEY_q,          killclient,     {0} },
-	{ MODKEY,                    XKB_KEY_f,         togglefullscreen, {0} },
-	{ MODKEY,                    XKB_KEY_0,          view,           {.ui = ~0} },
-	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_parenright, tag,            {.ui = ~0} },
-	{ MODKEY,                    XKB_KEY_comma,      focusmon,       {.i = WLR_DIRECTION_LEFT} },
-	{ MODKEY,                    XKB_KEY_period,     focusmon,       {.i = WLR_DIRECTION_RIGHT} },
-	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_less,       tagmon,         {.i = WLR_DIRECTION_LEFT} },
-	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_greater,    tagmon,         {.i = WLR_DIRECTION_RIGHT} },
+	{ MODKEY,                    XKB_KEY_Return,                  spawn,              {.v = termcmd} },
+	{ MODKEY,                    XKB_KEY_o,                       spawn,              {.v = termcmd2} },
+	{ MODKEY,                    XKB_KEY_t,                       spawn,              {.v = browsercmd} },
+	{ MODKEY,                    XKB_KEY_n,                       spawn,              {.v = moodnight} },
+  { 0,                         XKB_KEY_XF86AudioRaiseVolume,    spawn,              {.v = volup} },
+	{ 0,                         XKB_KEY_XF86AudioLowerVolume,    spawn,              {.v = voldown} },
+	{ 0,                         XKB_KEY_XF86AudioMute,           spawn,              {.v = volmute} },
+	{ 0,                         XKB_KEY_XF86MonBrightnessUp,     spawn,              {.v = brightup} },
+	{ 0,                         XKB_KEY_XF86MonBrightnessDown,   spawn,              {.v = brightdn} },
+	{ 0,                         XKB_KEY_Print,                   spawn,              {.v = screenshotcmd} },
+  { MODKEY,                    XKB_KEY_Down,                    focusstack,         {.i = +1} },
+	{ MODKEY,                    XKB_KEY_Up,                      focusstack,         {.i = -1} },
+	{ MODKEY,                    XKB_KEY_q,                       killclient,         {0} },
+	{ MODKEY,                    XKB_KEY_f,                       togglefullscreen,   {0} },
+	{ MODKEY,                    XKB_KEY_0,                       view,               {.ui = ~0} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_parenright,              tag,                {.ui = ~0} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Q,                       quit,               {0} },
 	TAGKEYS(          XKB_KEY_1, XKB_KEY_exclam,                     0),
 	TAGKEYS(          XKB_KEY_2, XKB_KEY_at,                         1),
 	TAGKEYS(          XKB_KEY_3, XKB_KEY_numbersign,                 2),
 	TAGKEYS(          XKB_KEY_4, XKB_KEY_dollar,                     3),
 	TAGKEYS(          XKB_KEY_5, XKB_KEY_percent,                    4),
-	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Q,          quit,           {0} },
 
-	/* Ctrl-Alt-Backspace and Ctrl-Alt-Fx used to be handled by X server */
 	{ WLR_MODIFIER_CTRL|WLR_MODIFIER_ALT,XKB_KEY_Terminate_Server, quit, {0} },
-	/* Ctrl-Alt-Fx is used to switch to another VT, if you don't know what a VT is
-	 * do not remove them.
-	 */
-#define CHVT(n) { WLR_MODIFIER_CTRL|WLR_MODIFIER_ALT,XKB_KEY_XF86Switch_VT_##n, chvt, {.ui = (n)} }
-	CHVT(1), CHVT(2), CHVT(3), CHVT(4), CHVT(5), CHVT(6),
-	CHVT(7), CHVT(8), CHVT(9), CHVT(10), CHVT(11), CHVT(12),
-};
-
-static const Button buttons[] = {
-	{ MODKEY, BTN_LEFT,   moveresize,     {.ui = CurMove} },
-	{ MODKEY, BTN_RIGHT,  moveresize,     {.ui = CurResize} },
+  
 };
