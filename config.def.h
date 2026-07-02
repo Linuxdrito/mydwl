@@ -112,7 +112,6 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 
 /* commands */
 static const char *termcmd[] = { "footclient", NULL };
-static const char *termcmd2[] = { "foot", NULL };
 static const char *browsercmd[] = { "/home/pedrito/thorium-browser.AppImage", "--enable-features=UseOzonePlatform", "--ozone-platform=wayland", "--use-gl=angle", "--enable-features=VaapiVideoDecoder", "--ignore-gpu-blocklist", "--disbale-features=UseChromeOSDirectVideoDecoder" , "--process-per-site" , "--disable-background-networking" ,NULL };
 static const char *volup[]    = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%+", NULL };
 static const char *voldown[]  = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-", NULL };
@@ -133,11 +132,15 @@ static const Rule rules[] = {
 	{ NULL,  NULL,       0,       0,           -1 }, /* Start on ONLY tag "9" */
 };
 
+static const char *const autostart_cmds[][3] = {
+	{"pipewire", NULL}, {"wireplumber", NULL},
+	{"pipewire-pulse", NULL}, {"foot", "--server", NULL},
+};
+
 static const Key keys[] = {
 	/* Note that Shift changes certain key codes: c -> C, 2 -> at, etc. */
 	/* modifier                  key                 function        argument */
 	{ MODKEY,                    XKB_KEY_Return,                  spawn,              {.v = termcmd} },
-	{ MODKEY,                    XKB_KEY_o,                       spawn,              {.v = termcmd2} },
 	{ MODKEY,                    XKB_KEY_t,                       spawn,              {.v = browsercmd} },
 	{ MODKEY,                    XKB_KEY_n,                       spawn,              {.v = moodnight} },
   { 0,                         XKB_KEY_XF86AudioRaiseVolume,    spawn,              {.v = volup} },

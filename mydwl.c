@@ -60,6 +60,10 @@
 #include <wlr/util/log.h>
 #include <wlr/util/region.h>
 #include <xkbcommon/xkbcommon.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <sys/prctl.h>
 
 #include "util.h"
 
@@ -401,6 +405,7 @@ static struct wl_listener request_start_drag = {.notify = requeststartdrag};
 static struct wl_listener start_drag = {.notify = startdrag};
 static struct wl_listener new_session_lock = {.notify = locksession};
 
+
 #include "config.h"
 
 #include "client.h"
@@ -487,6 +492,20 @@ arrange(Monitor *m)
 		m->lt[m->sellt]->arrange(m);
 	motionnotify(0, NULL, 0, 0, 0, 0);
 	checkidleinhibitor(NULL);
+}
+
+void autostart(void) {
+	for (size_t i = 0; i < sizeof(autostart_cmds) / sizeof(autostart_cmds[0]); i++) {
+		if (fork() == 0) {
+			prctl(PR_SET_PDEATHSIG, SIGTERM);
+			if (getppid() == 1)
+				exit(1);
+			setsid();
+			execvp(autostart_cmds[i][0], (char *const *)autostart_cmds[i]);
+			
+			exit(1);
+		}
+	}
 }
 
 void
@@ -2515,6 +2534,7 @@ main(int argc, char *argv[])
 	if (!getenv("XDG_RUNTIME_DIR"))
 		die("XDG_RUNTIME_DIR must be set");
 	setup();
+  autostart();
 	run(startup_cmd);
 	cleanup();
 	return EXIT_SUCCESS;
