@@ -23,7 +23,6 @@
 #include <wlr/types/wlr_export_dmabuf_v1.h>
 #include <wlr/types/wlr_ext_data_control_v1.h>
 #include <wlr/types/wlr_fractional_scale_v1.h>
-#include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_input_device.h>
@@ -1952,8 +1951,6 @@ setup(void)
 
 	activation = wlr_xdg_activation_v1_create(dpy);
 	wl_signal_add(&activation->events.request_activate, &request_activate);
-
-	wlr_scene_set_gamma_control_manager_v1(scene, wlr_gamma_control_manager_v1_create(dpy));
 
 	output_layout = wlr_output_layout_create(dpy);
 	wl_signal_add(&output_layout->events.change, &layout_change);
