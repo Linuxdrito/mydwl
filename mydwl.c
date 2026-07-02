@@ -35,7 +35,6 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_output_management_v1.h>
-#include <wlr/types/wlr_output_power_management_v1.h>
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_presentation_time.h>
@@ -353,7 +352,6 @@ static struct wlr_output_manager_v1 *output_mgr;
 static struct wlr_virtual_keyboard_manager_v1 *virtual_keyboard_mgr;
 static struct wlr_virtual_pointer_manager_v1 *virtual_pointer_mgr;
 static struct wlr_cursor_shape_manager_v1 *cursor_shape_mgr;
-static struct wlr_output_power_manager_v1 *power_mgr;
 
 static struct wlr_pointer_constraints_v1 *pointer_constraints;
 static struct wlr_relative_pointer_manager_v1 *relative_pointer_mgr;
@@ -1802,18 +1800,6 @@ printstatus(void)
 void
 powermgrsetmode(struct wl_listener *listener, void *data)
 {
-	struct wlr_output_power_v1_set_mode_event *event = data;
-	struct wlr_output_state state = {0};
-	Monitor *m = event->output->data;
-
-	if (!m)
-		return;
-
-	m->gamma_lut_changed = 1;
-	wlr_output_state_set_enabled(&state, event->mode);
-	wlr_output_commit_state(m->wlr_output, &state);
-
-	m->asleep = !event->mode;
 	updatemons(NULL, NULL);
 }
 
@@ -2101,9 +2087,6 @@ setup(void)
 	wl_signal_add(&activation->events.request_activate, &request_activate);
 
 	wlr_scene_set_gamma_control_manager_v1(scene, wlr_gamma_control_manager_v1_create(dpy));
-
-	power_mgr = wlr_output_power_manager_v1_create(dpy);
-	wl_signal_add(&power_mgr->events.set_mode, &output_power_mgr_set_mode);
 
 	output_layout = wlr_output_layout_create(dpy);
 	wl_signal_add(&output_layout->events.change, &layout_change);
