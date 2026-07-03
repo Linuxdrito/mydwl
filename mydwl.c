@@ -1412,7 +1412,7 @@ void setup(void) {
 	wlr_subcompositor_create(dpy);
 	wlr_data_device_manager_create(dpy);
 	wlr_export_dmabuf_manager_v1_create(dpy);
-	wlr_screencopy_manager_v1_create(dpy);
+	
 	wlr_data_control_manager_v1_create(dpy);
 	wlr_ext_data_control_manager_v1_create(dpy, 1);
 	wlr_primary_selection_v1_device_manager_create(dpy);
@@ -1427,6 +1427,8 @@ void setup(void) {
 
 	output_layout = wlr_output_layout_create(dpy);
 	wl_signal_add(&output_layout->events.change, &layout_change);
+  wlr_xdg_output_manager_v1_create(dpy, output_layout);
+  wlr_screencopy_manager_v1_create(dpy);
 
 	wl_signal_add(&backend->events.new_output, &new_output);
 
