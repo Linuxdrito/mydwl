@@ -119,7 +119,7 @@ static const Button buttons[] = {
 static const Rule rules[] = {
 	/* app_id             title       tags mask     isfloating   monitor */
 	/* examples: */
-	{ NULL,  NULL,       0,       0}, /* Start on ONLY tag "9" */
+	{ NULL,  NULL,       0}, /* Start on ONLY tag "9" */
 };
 
 static const char *const autostart_cmds[][3] = {

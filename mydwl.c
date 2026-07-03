@@ -52,9 +52,6 @@
 #include <wlr/util/log.h>
 #include <wlr/util/region.h>
 #include <xkbcommon/xkbcommon.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <signal.h>
 #include <sys/prctl.h>
 
 #include "util.h"
@@ -70,7 +67,7 @@
 #define LISTEN_STATIC(E, H)     do { struct wl_listener *_l = ecalloc(1, sizeof(*_l)); _l->notify = (H); wl_signal_add((E), _l); } while (0)
 
 enum { CurNormal, CurPressed};
-enum { LyrBg, LyrBottom, LyrTile, LyrFloat, LyrTop, LyrFS, LyrOverlay, LyrBlock, NUM_LAYERS };
+enum { LyrBg, LyrBottom, LyrTile, LyrTop, LyrFS, LyrOverlay, LyrBlock, NUM_LAYERS };
 enum { XDGShell, LayerShell };
 
 typedef union {
@@ -115,7 +112,7 @@ typedef struct {
 	struct wl_listener destroy_decoration;
 	unsigned int bw;
 	uint32_t tags;
-	int isfloating, isurgent, isfullscreen;
+	int isurgent, isfullscreen;
 	uint32_t resize;
 } Client;
 
@@ -189,7 +186,6 @@ typedef struct {
 	const char *id;
 	const char *title;
 	uint32_t tags;
-	int isfloating;
 } Rule;
 
 /* function declarations */
@@ -252,11 +248,10 @@ static void rendermon(struct wl_listener *listener, void *data);
 static void requestdecorationmode(struct wl_listener *listener, void *data);
 static void requeststartdrag(struct wl_listener *listener, void *data);
 static void requestmonstate(struct wl_listener *listener, void *data);
-static void resize(Client *c, struct wlr_box geo, int interact);
+static void resize(Client *c, struct wlr_box geo);
 static void run(char *startup_cmd);
 static void setcursor(struct wl_listener *listener, void *data);
 static void setcursorshape(struct wl_listener *listener, void *data);
-static void setfloating(Client *c, int floating);
 static void setfullscreen(Client *c, int fullscreen);
 static void setpsel(struct wl_listener *listener, void *data);
 static void setsel(struct wl_listener *listener, void *data);
@@ -371,17 +366,14 @@ void applyrules(Client *c) {
 
 	for (r = rules; r < END(rules); r++) {
 		if ((!r->title || strstr(title, r->title)) && (!r->id || strstr(appid, r->id))) {
-			c->isfloating = r->isfloating;
 			newtags |= r->tags;
 		}
 	}
 
-	c->isfloating |= client_is_float_type(c);
 	c->mon = &monitor;
 	c->tags = newtags ? newtags : monitor.tagset[monitor.seltags];
-	resize(c, c->geom, 0);
+	resize(c, c->geom);
 	setfullscreen(c, c->isfullscreen);
-	setfloating(c, c->isfloating);
 }
 
 void arrange(Monitor *m) {
@@ -398,9 +390,7 @@ void arrange(Monitor *m) {
 
 	wl_list_for_each(c, &clients, link) {
 		if (c->scene->node.parent == layers[LyrFS]) continue;
-		wlr_scene_node_reparent(&c->scene->node,
-				(!m->lt[m->sellt]->arrange && c->isfloating) ? layers[LyrTile] :
-				(m->lt[m->sellt]->arrange && c->isfloating) ? layers[LyrFloat] : c->scene->node.parent);
+		wlr_scene_node_reparent(&c->scene->node, layers[LyrTile]);
 	}
 
 	if (m->lt[m->sellt]->arrange) m->lt[m->sellt]->arrange(m);
@@ -600,7 +590,7 @@ void commitnotify(struct wl_listener *listener, void *data) {
 		return;
 	}
 
-	resize(c, c->geom, (c->isfloating && !c->isfullscreen));
+	resize(c, c->geom);
 	if (c->resize && c->resize <= c->surface.xdg->current.configure_serial) c->resize = 0;
 }
 
@@ -1070,7 +1060,7 @@ void mapnotify(struct wl_listener *listener, void *data) {
 	client_get_geometry(c, &c->geom);
 
 	if (client_is_unmanaged(c)) {
-		wlr_scene_node_reparent(&c->scene->node, layers[LyrFloat]);
+		wlr_scene_node_reparent(&c->scene->node, layers[LyrTile]);
 		wlr_scene_node_set_position(&c->scene->node, c->geom.x, c->geom.y);
 		client_set_size(c, c->geom.width, c->geom.height);
 		if (client_wants_focus(c)) {
@@ -1093,7 +1083,6 @@ void mapnotify(struct wl_listener *listener, void *data) {
 	wl_list_insert(&fstack, &c->flink);
 
 	if ((p = client_get_parent(c))) {
-		c->isfloating = 1;
 		c->mon = &monitor;
 		c->tags = p->tags;
 	} else {
@@ -1210,13 +1199,13 @@ void printstatus(void) {
 		printf("%s title %s\n", monitor.wlr_output->name, client_get_title(c));
 		printf("%s appid %s\n", monitor.wlr_output->name, client_get_appid(c));
 		printf("%s fullscreen %d\n", monitor.wlr_output->name, c->isfullscreen);
-		printf("%s floating %d\n", monitor.wlr_output->name, c->isfloating);
+		printf("%s floating 0\n", monitor.wlr_output->name);
 		sel = c->tags;
 	} else {
 		printf("%s title \n", monitor.wlr_output->name);
 		printf("%s appid \n", monitor.wlr_output->name);
 		printf("%s fullscreen \n", monitor.wlr_output->name);
-		printf("%s floating \n", monitor.wlr_output->name);
+		printf("%s floating 0\n", monitor.wlr_output->name);
 	}
 
 	printf("%s selmon 1\n", monitor.wlr_output->name);
@@ -1240,7 +1229,7 @@ void rendermon(struct wl_listener *listener, void *data) {
 	struct timespec now;
 
 	wl_list_for_each(c, &clients, link) {
-		if (c->resize && !c->isfloating && client_is_rendered_on_mon(c, m) && !client_is_stopped(c)) goto skip;
+		if (c->resize && client_is_rendered_on_mon(c, m) && !client_is_stopped(c)) goto skip;
 	}
 	wlr_scene_output_commit(m->scene_output, NULL);
 
@@ -1269,16 +1258,14 @@ void requestmonstate(struct wl_listener *listener, void *data) {
 	updatemons(NULL, NULL);
 }
 
-void resize(Client *c, struct wlr_box geo, int interact) {
-	struct wlr_box *bbox;
+void resize(Client *c, struct wlr_box geo) {
 	struct wlr_box clip;
 
 	if (!client_surface(c)->mapped) return;
 
-	bbox = interact ? &sgeom : &monitor.w;
 	client_set_bounds(c, geo.width, geo.height);
 	c->geom = geo;
-	applybounds(c, bbox);
+	applybounds(c, &monitor.w);
 
 	wlr_scene_node_set_position(&c->scene->node, c->geom.x, c->geom.y);
 	wlr_scene_node_set_position(&c->scene_surface->node, c->bw, c->bw);
@@ -1339,27 +1326,18 @@ void setcursorshape(struct wl_listener *listener, void *data) {
 	if (event->seat_client == seat->pointer_state.focused_client) wlr_cursor_set_xcursor(cursor, cursor_mgr, wlr_cursor_shape_v1_name(event->shape));
 }
 
-void setfloating(Client *c, int floating) {
-	Client *p = client_get_parent(c);
-	c->isfloating = floating;
-	if (!client_surface(c)->mapped || !monitor.lt[monitor.sellt]->arrange) return;
-	wlr_scene_node_reparent(&c->scene->node, layers[c->isfullscreen || (p && p->isfullscreen) ? LyrFS : c->isfloating ? LyrFloat : LyrTile]);
-	arrange(&monitor);
-	printstatus();
-}
-
 void setfullscreen(Client *c, int fullscreen) {
 	c->isfullscreen = fullscreen;
 	if (!client_surface(c)->mapped) return;
 	c->bw = fullscreen ? 0 : borderpx;
 	client_set_fullscreen(c, fullscreen);
-	wlr_scene_node_reparent(&c->scene->node, layers[c->isfullscreen ? LyrFS : c->isfloating ? LyrFloat : LyrTile]);
+	wlr_scene_node_reparent(&c->scene->node, layers[c->isfullscreen ? LyrFS : LyrTile]);
 
 	if (fullscreen) {
 		c->prev = c->geom;
-		resize(c, monitor.m, 0);
+		resize(c, monitor.m);
 	} else {
-		resize(c, c->prev, 0);
+		resize(c, c->prev);
 	}
 	arrange(&monitor);
 	printstatus();
@@ -1513,7 +1491,7 @@ void tile(Monitor *m) {
 	Client *c;
 
 	wl_list_for_each(c, &clients, link)
-		if (VISIBLEON(c, m) && !c->isfloating && !c->isfullscreen) n++;
+		if (VISIBLEON(c, m) && !c->isfullscreen) n++;
 	if (n == 0) return;
 
 	if (n > m->nmaster) mw = m->nmaster ? (int)roundf(m->w.width * m->mfact) : 0;
@@ -1521,12 +1499,12 @@ void tile(Monitor *m) {
 	
 	i = my = ty = 0;
 	wl_list_for_each(c, &clients, link) {
-		if (!VISIBLEON(c, m) || c->isfloating || c->isfullscreen) continue;
+		if (!VISIBLEON(c, m) || c->isfullscreen) continue;
 		if (i < m->nmaster) {
-			resize(c, (struct wlr_box){.x = m->w.x, .y = m->w.y + my, .width = mw, .height = (m->w.height - my) / (MIN(n, m->nmaster) - i)}, 0);
+			resize(c, (struct wlr_box){.x = m->w.x, .y = m->w.y + my, .width = mw, .height = (m->w.height - my) / (MIN(n, m->nmaster) - i)});
 			my += c->geom.height;
 		} else {
-			resize(c, (struct wlr_box){.x = m->w.x + mw, .y = m->w.y + ty, .width = m->w.width - mw, .height = (m->w.height - ty) / (n - i)}, 0);
+			resize(c, (struct wlr_box){.x = m->w.x + mw, .y = m->w.y + ty, .width = m->w.width - mw, .height = (m->w.height - ty) / (n - i)});
 			ty += c->geom.height;
 		}
 		i++;
@@ -1602,7 +1580,7 @@ void updatemons(struct wl_listener *listener, void *data) {
 
 	arrangelayers(&monitor);
 	arrange(&monitor);
-	if ((c = focustop(&monitor)) && c->isfullscreen) resize(c, monitor.m, 0);
+	if ((c = focustop(&monitor)) && c->isfullscreen) resize(c, monitor.m);
 
 	monitor.gamma_lut_changed = 1;
 
