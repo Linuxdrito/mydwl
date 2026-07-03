@@ -48,7 +48,6 @@
 #include <wlr/util/region.h>
 #include <xkbcommon/xkbcommon.h>
 #include <sys/prctl.h>
-#include <inttypes.h>
 #include "util.h"
 
 #define MAX(A, B)               ((A) > (B) ? (A) : (B))
@@ -101,7 +100,6 @@ typedef struct {
 	struct wl_listener maximize;
 	struct wl_listener unmap;
 	struct wl_listener destroy;
-	struct wl_listener set_title;
 	struct wl_listener fullscreen;
 	struct wl_listener set_decoration_mode;
 	struct wl_listener destroy_decoration;
@@ -211,7 +209,6 @@ static void motionnotify(uint32_t time, struct wlr_input_device *device, double 
 static void motionrelative(struct wl_listener *listener, void *data);
 static void pointerfocus(Client *c, struct wlr_surface *surface,
 		double sx, double sy, uint32_t time);
-static void printstatus(void);
 static void quit(const Arg *arg);
 static void rendermon(struct wl_listener *listener, void *data);
 static void requestdecorationmode(struct wl_listener *listener, void *data);
@@ -233,7 +230,6 @@ static void toggleview(const Arg *arg);
 static void unmaplayersurfacenotify(struct wl_listener *listener, void *data);
 static void unmapnotify(struct wl_listener *listener, void *data);
 static void updatemons(struct wl_listener *listener, void *data);
-static void updatetitle(struct wl_listener *listener, void *data);
 static void urgent(struct wl_listener *listener, void *data);
 static void view(const Arg *arg);
 static void xytonode(double x, double y, struct wlr_surface **psurface,
@@ -675,7 +671,6 @@ void createmon(struct wl_listener *listener, void *data) {
 	wlr_output_layout_add(output_layout, wlr_output, 0, 0);
 
 	mon_init = 1;
-	printstatus();
 }
 
 void createnotify(struct wl_listener *listener, void *data) {
@@ -690,7 +685,6 @@ void createnotify(struct wl_listener *listener, void *data) {
 	LISTEN(&toplevel->events.destroy, &c->destroy, destroynotify);
 	LISTEN(&toplevel->events.request_fullscreen, &c->fullscreen, fullscreennotify);
 	LISTEN(&toplevel->events.request_maximize, &c->maximize, maximizenotify);
-	LISTEN(&toplevel->events.set_title, &c->set_title, updatetitle);
 }
 
 void createpointer(struct wlr_pointer *pointer) {
@@ -760,7 +754,6 @@ void destroylayersurfacenotify(struct wl_listener *listener, void *data) {
 void destroynotify(struct wl_listener *listener, void *data) {
 	Client *c = wl_container_of(listener, c, destroy);
 	wl_list_remove(&c->destroy.link);
-	wl_list_remove(&c->set_title.link);
 	wl_list_remove(&c->fullscreen.link);
 	wl_list_remove(&c->commit.link);
 	wl_list_remove(&c->map.link);
@@ -811,7 +804,6 @@ void focusclient(Client *c, int lift) {
 			client_activate_surface(old, 0);
 		}
 	}
-	printstatus();
 
 	if (!c) {
 		wlr_seat_keyboard_notify_clear_focus(seat);
@@ -996,7 +988,6 @@ void mapnotify(struct wl_listener *listener, void *data) {
 
 	focusclient(c, 1);
 	arrange(&monitor);
-	printstatus();
 
 unset_fullscreen:
 	wl_list_for_each(w, &clients, link) {
@@ -1074,35 +1065,6 @@ void pointerfocus(Client *c, struct wlr_surface *surface, double sx, double sy, 
 
 	wlr_seat_pointer_notify_enter(seat, surface, sx, sy);
 	wlr_seat_pointer_notify_motion(seat, time, sx, sy);
-}
-
-void printstatus(void) {
-	Client *c;
-	uint32_t occ = 0, urg = 0, sel = 0;
-	if (!monitor.wlr_output) return;
-
-	wl_list_for_each(c, &clients, link) {
-		occ |= c->tags;
-		if (c->isurgent) urg |= c->tags;
-	}
-
-	if ((c = focustop(&monitor))) {
-		printf("%s title %s\n", monitor.wlr_output->name, client_get_title(c));
-		printf("%s appid %s\n", monitor.wlr_output->name, client_get_appid(c));
-		printf("%s fullscreen %d\n", monitor.wlr_output->name, c->isfullscreen);
-		printf("%s floating 0\n", monitor.wlr_output->name);
-		sel = c->tags;
-	} else {
-		printf("%s title \n", monitor.wlr_output->name);
-		printf("%s appid \n", monitor.wlr_output->name);
-		printf("%s fullscreen \n", monitor.wlr_output->name);
-		printf("%s floating 0\n", monitor.wlr_output->name);
-	}
-
-	printf("%s selmon 1\n", monitor.wlr_output->name);
-	printf("%s tags %"PRIu32" %"PRIu32" %"PRIu32" %"PRIu32"\n", monitor.wlr_output->name, occ, monitor.tagset[monitor.seltags], sel, urg);
-	printf("%s layout []=\n", monitor.wlr_output->name);
-	fflush(stdout);
 }
 
 void quit(const Arg *arg) {
@@ -1194,7 +1156,6 @@ void run(char *startup_cmd) {
 	}
 
 	if (fd_set_nonblock(STDOUT_FILENO) < 0) close(STDOUT_FILENO);
-	printstatus();
 
 	wlr_cursor_warp_closest(cursor, NULL, cursor->x, cursor->y);
 	wlr_cursor_set_xcursor(cursor, cursor_mgr, "default");
@@ -1221,7 +1182,6 @@ void setfullscreen(Client *c, int fullscreen) {
 		resize(c, c->prev);
 	}
 	arrange(&monitor);
-	printstatus();
 }
 
 void setsel(struct wl_listener *listener, void *data) {
@@ -1349,7 +1309,6 @@ void tag(const Arg *arg) {
 	sel->tags = arg->ui & TAGMASK;
 	focusclient(focustop(&monitor), 1);
 	arrange(&monitor);
-	printstatus();
 }
 
 void tile(Monitor *m) {
@@ -1390,7 +1349,6 @@ void toggletag(const Arg *arg) {
 	sel->tags = newtags;
 	focusclient(focustop(&monitor), 1);
 	arrange(&monitor);
-	printstatus();
 }
 
 void toggleview(const Arg *arg) {
@@ -1399,7 +1357,6 @@ void toggleview(const Arg *arg) {
 	monitor.tagset[monitor.seltags] = newtagset;
 	focusclient(focustop(&monitor), 1);
 	arrange(&monitor);
-	printstatus();
 }
 
 void unmaplayersurfacenotify(struct wl_listener *listener, void *data) {
@@ -1427,7 +1384,6 @@ void unmapnotify(struct wl_listener *listener, void *data) {
 		arrange(&monitor);
 	}
 	wlr_scene_node_destroy(&c->scene->node);
-	printstatus();
 	motionnotify(0, NULL, 0, 0, 0, 0);
 }
 
@@ -1459,18 +1415,12 @@ void updatemons(struct wl_listener *listener, void *data) {
 	wlr_cursor_move(cursor, NULL, 0, 0);
 }
 
-void updatetitle(struct wl_listener *listener, void *data) {
-	Client *c = wl_container_of(listener, c, set_title);
-	if (c == focustop(&monitor)) printstatus();
-}
-
 void urgent(struct wl_listener *listener, void *data) {
 	struct wlr_xdg_activation_v1_request_activate_event *event = data;
 	Client *c = NULL;
 	toplevel_from_wlr_surface(event->surface, &c, NULL);
 	if (!c || c == focustop(&monitor)) return;
 	c->isurgent = 1;
-	printstatus();
 	if (client_surface(c)->mapped) client_set_border_color(c, urgentcolor);
 }
 
@@ -1480,7 +1430,6 @@ void view(const Arg *arg) {
 	if (arg->ui & TAGMASK) monitor.tagset[monitor.seltags] = arg->ui & TAGMASK;
 	focusclient(focustop(&monitor), 1);
 	arrange(&monitor);
-	printstatus();
 }
 
 void xytonode(double x, double y, struct wlr_surface **psurface, Client **pc, LayerSurface **pl, double *nx, double *ny) {
