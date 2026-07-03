@@ -22,11 +22,6 @@ static int log_level = WLR_ERROR;
 
 /* NOTE: ALWAYS keep a rule declared even if you don't use rules (e.g leave at least one example) */
 
-/* layout(s) */
-static const Layout layouts[] = {
-	/* symbol     arrange function */
-	{ "[]=",      tile },
-};
 
 /* monitors */
 /* (x=-1, y=-1) is reserved as an "autoconfigure" monitor position indicator

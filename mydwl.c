@@ -152,11 +152,6 @@ typedef struct {
 	struct wl_listener surface_commit;
 } LayerSurface;
 
-typedef struct {
-	const char *symbol;
-	void (*arrange)(Monitor *);
-} Layout;
-
 struct Monitor {
 	struct wlr_output *wlr_output;
 	struct wlr_scene_output *scene_output;
@@ -167,14 +162,10 @@ struct Monitor {
 	struct wlr_box m;
 	struct wlr_box w;
 	struct wl_list layers[4];
-	const Layout *lt[2];
 	unsigned int seltags;
-	unsigned int sellt;
 	uint32_t tagset[2];
 	float mfact;
-	int gamma_lut_changed;
 	int nmaster;
-	char ltsymbol[16];
 };
 
 typedef struct {
@@ -242,7 +233,6 @@ static void motionrelative(struct wl_listener *listener, void *data);
 static void pointerfocus(Client *c, struct wlr_surface *surface,
 		double sx, double sy, uint32_t time);
 static void printstatus(void);
-static void powermgrsetmode(struct wl_listener *listener, void *data);
 static void quit(const Arg *arg);
 static void rendermon(struct wl_listener *listener, void *data);
 static void requestdecorationmode(struct wl_listener *listener, void *data);
@@ -332,7 +322,6 @@ static struct wl_listener new_xdg_toplevel = {.notify = createnotify};
 static struct wl_listener new_xdg_popup = {.notify = createpopup};
 static struct wl_listener new_xdg_decoration = {.notify = createdecoration};
 static struct wl_listener new_layer_surface = {.notify = createlayersurface};
-static struct wl_listener output_power_mgr_set_mode = {.notify = powermgrsetmode};
 static struct wl_listener request_activate = {.notify = urgent};
 static struct wl_listener request_cursor = {.notify = setcursor};
 static struct wl_listener request_set_psel = {.notify = setpsel};
@@ -386,14 +375,13 @@ void arrange(Monitor *m) {
 	}
 
 	wlr_scene_node_set_enabled(&m->fullscreen_bg->node, (c = focustop(m)) && c->isfullscreen);
-	strncpy(m->ltsymbol, m->lt[m->sellt]->symbol, LENGTH(m->ltsymbol));
 
 	wl_list_for_each(c, &clients, link) {
 		if (c->scene->node.parent == layers[LyrFS]) continue;
 		wlr_scene_node_reparent(&c->scene->node, layers[LyrTile]);
 	}
 
-	if (m->lt[m->sellt]->arrange) m->lt[m->sellt]->arrange(m);
+	tile(m);
 	motionnotify(0, NULL, 0, 0, 0, 0);
 }
 
@@ -541,7 +529,6 @@ void cleanuplisteners(void) {
 	wl_list_remove(&new_xdg_decoration.link);
 	wl_list_remove(&new_xdg_popup.link);
 	wl_list_remove(&new_layer_surface.link);
-	wl_list_remove(&output_power_mgr_set_mode.link);
 	wl_list_remove(&request_activate.link);
 	wl_list_remove(&request_cursor.link);
 	wl_list_remove(&request_set_psel.link);
@@ -701,9 +688,6 @@ void createmon(struct wl_listener *listener, void *data) {
 	monitor.tagset[0] = monitor.tagset[1] = 1;
 	monitor.mfact = 0.55f;
 	monitor.nmaster = 1;
-	monitor.lt[0] = &layouts[0];
-	monitor.lt[1] = &layouts[LENGTH(layouts) > 1 ? 1 : 0];
-	strncpy(monitor.ltsymbol, monitor.lt[monitor.sellt]->symbol, LENGTH(monitor.ltsymbol));
 	
 	wlr_output_state_set_scale(&state, 1.0f);
 	wlr_output_state_set_transform(&state, WL_OUTPUT_TRANSFORM_NORMAL);
@@ -1210,12 +1194,8 @@ void printstatus(void) {
 
 	printf("%s selmon 1\n", monitor.wlr_output->name);
 	printf("%s tags %"PRIu32" %"PRIu32" %"PRIu32" %"PRIu32"\n", monitor.wlr_output->name, occ, monitor.tagset[monitor.seltags], sel, urg);
-	printf("%s layout %s\n", monitor.wlr_output->name, monitor.ltsymbol);
+	printf("%s layout []=\n", monitor.wlr_output->name);
 	fflush(stdout);
-}
-
-void powermgrsetmode(struct wl_listener *listener, void *data) {
-	updatemons(NULL, NULL);
 }
 
 void quit(const Arg *arg) {
@@ -1581,8 +1561,6 @@ void updatemons(struct wl_listener *listener, void *data) {
 	arrangelayers(&monitor);
 	arrange(&monitor);
 	if ((c = focustop(&monitor)) && c->isfullscreen) resize(c, monitor.m);
-
-	monitor.gamma_lut_changed = 1;
 
 	wl_list_for_each(c, &clients, link) {
 		if (!c->mon && client_surface(c)->mapped) {
