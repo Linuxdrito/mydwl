@@ -33,16 +33,6 @@ static const Layout layouts[] = {
  * WARNING: negative values other than (-1, -1) cause problems with Xwayland clients
  * https://gitlab.freedesktop.org/xorg/xserver/-/issues/899
 */
-/* NOTE: ALWAYS add a fallback rule, even if you are completely sure it won't be used */
-static const MonitorRule monrules[] = {
-	/* name       mfact  nmaster scale layout       rotate/reflect                x    y */
-	/* example of a HiDPI laptop monitor:
-	{ "eDP-1",    0.5f,  1,      2,    &layouts[0], WL_OUTPUT_TRANSFORM_NORMAL,   -1,  -1 },
-	*/
-	/* defaults */
-	{ NULL,       0.55f, 1,      1,    &layouts[0], WL_OUTPUT_TRANSFORM_NORMAL,   -1,  -1 },
-};
-
 /* keyboard */
 static const struct xkb_rule_names xkb_rules = {
 	/* can specify fields: rules, model, layout, variant, options */
@@ -129,7 +119,7 @@ static const Button buttons[] = {
 static const Rule rules[] = {
 	/* app_id             title       tags mask     isfloating   monitor */
 	/* examples: */
-	{ NULL,  NULL,       0,       0,           -1 }, /* Start on ONLY tag "9" */
+	{ NULL,  NULL,       0,       0}, /* Start on ONLY tag "9" */
 };
 
 static const char *const autostart_cmds[][3] = {
