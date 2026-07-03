@@ -111,12 +111,6 @@ static const Button buttons[] = {
 	{ 0,                         0,                   NULL,           {0} },
 };
 
-static const Rule rules[] = {
-	/* app_id             title       tags mask     isfloating   monitor */
-	/* examples: */
-	{ NULL,  NULL,       0}, /* Start on ONLY tag "9" */
-};
-
 static const char *const autostart_cmds[][3] = {
 	{"pipewire", NULL}, {"wireplumber", NULL},
 	{"pipewire-pulse", NULL}, {"foot", "--server", NULL},

@@ -16,13 +16,11 @@
 #include <wlr/types/wlr_alpha_modifier_v1.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_cursor.h>
-#include <wlr/types/wlr_cursor_shape_v1.h>
 #include <wlr/types/wlr_data_control_v1.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_drm.h>
 #include <wlr/types/wlr_export_dmabuf_v1.h>
 #include <wlr/types/wlr_ext_data_control_v1.h>
-#include <wlr/types/wlr_fractional_scale_v1.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_keyboard_group.h>
@@ -32,10 +30,7 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_pointer.h>
-#include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_presentation_time.h>
-#include <wlr/types/wlr_primary_selection.h>
-#include <wlr/types/wlr_primary_selection_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_screencopy_v1.h>
@@ -53,7 +48,7 @@
 #include <wlr/util/region.h>
 #include <xkbcommon/xkbcommon.h>
 #include <sys/prctl.h>
-
+#include <inttypes.h>
 #include "util.h"
 
 #define MAX(A, B)               ((A) > (B) ? (A) : (B))
@@ -168,20 +163,8 @@ struct Monitor {
 	int nmaster;
 };
 
-typedef struct {
-	struct wlr_pointer_constraint_v1 *constraint;
-	struct wl_listener destroy;
-} PointerConstraint;
-
-typedef struct {
-	const char *id;
-	const char *title;
-	uint32_t tags;
-} Rule;
-
 /* function declarations */
 static void applybounds(Client *c, struct wlr_box *bbox);
-static void applyrules(Client *c);
 static void arrange(Monitor *m);
 static void arrangelayer(Monitor *m, struct wl_list *list,
 		struct wlr_box *usable_area, int exclusive);
@@ -201,16 +184,12 @@ static void createlayersurface(struct wl_listener *listener, void *data);
 static void createmon(struct wl_listener *listener, void *data);
 static void createnotify(struct wl_listener *listener, void *data);
 static void createpointer(struct wlr_pointer *pointer);
-static void createpointerconstraint(struct wl_listener *listener, void *data);
 static void createpopup(struct wl_listener *listener, void *data);
-static void cursorconstrain(struct wlr_pointer_constraint_v1 *constraint);
 static void cursorframe(struct wl_listener *listener, void *data);
-static void cursorwarptohint(void);
 static void destroydecoration(struct wl_listener *listener, void *data);
 static void destroydragicon(struct wl_listener *listener, void *data);
 static void destroylayersurfacenotify(struct wl_listener *listener, void *data);
 static void destroynotify(struct wl_listener *listener, void *data);
-static void destroypointerconstraint(struct wl_listener *listener, void *data);
 static void destroykeyboardgroup(struct wl_listener *listener, void *data);
 static void focusclient(Client *c, int lift);
 static void focusstack(const Arg *arg);
@@ -241,9 +220,7 @@ static void requestmonstate(struct wl_listener *listener, void *data);
 static void resize(Client *c, struct wlr_box geo);
 static void run(char *startup_cmd);
 static void setcursor(struct wl_listener *listener, void *data);
-static void setcursorshape(struct wl_listener *listener, void *data);
 static void setfullscreen(Client *c, int fullscreen);
-static void setpsel(struct wl_listener *listener, void *data);
 static void setsel(struct wl_listener *listener, void *data);
 static void setup(void);
 static void spawn(const Arg *arg);
@@ -283,11 +260,8 @@ static struct wlr_xdg_decoration_manager_v1 *xdg_decoration_mgr;
 static struct wl_list clients;
 static struct wl_list fstack;
 static struct wlr_layer_shell_v1 *layer_shell;
-static struct wlr_cursor_shape_manager_v1 *cursor_shape_mgr;
 
-static struct wlr_pointer_constraints_v1 *pointer_constraints;
 static struct wlr_relative_pointer_manager_v1 *relative_pointer_mgr;
-static struct wlr_pointer_constraint_v1 *active_constraint;
 
 static struct wlr_cursor *cursor;
 static struct wlr_xcursor_manager *cursor_mgr;
@@ -316,7 +290,6 @@ static struct wl_listener cursor_motion_absolute = {.notify = motionabsolute};
 static struct wl_listener gpu_reset = {.notify = gpureset};
 static struct wl_listener layout_change = {.notify = updatemons};
 static struct wl_listener new_input_device = {.notify = inputdevice};
-static struct wl_listener new_pointer_constraint = {.notify = createpointerconstraint};
 static struct wl_listener new_output = {.notify = createmon};
 static struct wl_listener new_xdg_toplevel = {.notify = createnotify};
 static struct wl_listener new_xdg_popup = {.notify = createpopup};
@@ -324,9 +297,7 @@ static struct wl_listener new_xdg_decoration = {.notify = createdecoration};
 static struct wl_listener new_layer_surface = {.notify = createlayersurface};
 static struct wl_listener request_activate = {.notify = urgent};
 static struct wl_listener request_cursor = {.notify = setcursor};
-static struct wl_listener request_set_psel = {.notify = setpsel};
 static struct wl_listener request_set_sel = {.notify = setsel};
-static struct wl_listener request_set_cursor_shape = {.notify = setcursorshape};
 static struct wl_listener request_start_drag = {.notify = requeststartdrag};
 static struct wl_listener start_drag = {.notify = startdrag};
 
@@ -345,24 +316,6 @@ void applybounds(Client *c, struct wlr_box *bbox) {
 		c->geom.x = bbox->x;
 	if (c->geom.y + c->geom.height <= bbox->y)
 		c->geom.y = bbox->y;
-}
-
-void applyrules(Client *c) {
-	const char *appid = client_get_appid(c);
-	const char *title = client_get_title(c);
-	uint32_t newtags = 0;
-	const Rule *r;
-
-	for (r = rules; r < END(rules); r++) {
-		if ((!r->title || strstr(title, r->title)) && (!r->id || strstr(appid, r->id))) {
-			newtags |= r->tags;
-		}
-	}
-
-	c->mon = &monitor;
-	c->tags = newtags ? newtags : monitor.tagset[monitor.seltags];
-	resize(c, c->geom);
-	setfullscreen(c, c->isfullscreen);
 }
 
 void arrange(Monitor *m) {
@@ -523,7 +476,6 @@ void cleanuplisteners(void) {
 	wl_list_remove(&gpu_reset.link);
 	wl_list_remove(&layout_change.link);
 	wl_list_remove(&new_input_device.link);
-	wl_list_remove(&new_pointer_constraint.link);
 	wl_list_remove(&new_output.link);
 	wl_list_remove(&new_xdg_toplevel.link);
 	wl_list_remove(&new_xdg_decoration.link);
@@ -531,9 +483,7 @@ void cleanuplisteners(void) {
 	wl_list_remove(&new_layer_surface.link);
 	wl_list_remove(&request_activate.link);
 	wl_list_remove(&request_cursor.link);
-	wl_list_remove(&request_set_psel.link);
 	wl_list_remove(&request_set_sel.link);
-	wl_list_remove(&request_set_cursor_shape.link);
 	wl_list_remove(&request_start_drag.link);
 	wl_list_remove(&start_drag.link);
 }
@@ -545,7 +495,7 @@ void commitlayersurfacenotify(struct wl_listener *listener, void *data) {
 	struct wlr_layer_surface_v1_state old_state;
 
 	if (l->layer_surface->initial_commit) {
-		client_set_scale(layer_surface->surface, monitor.wlr_output->scale);
+		client_set_scale(layer_surface->surface, 1.0f);
 		old_state = l->layer_surface->current;
 		l->layer_surface->current = l->layer_surface->pending;
 		arrangelayers(&monitor);
@@ -569,8 +519,12 @@ void commitnotify(struct wl_listener *listener, void *data) {
 	Client *c = wl_container_of(listener, c, commit);
 
 	if (c->surface.xdg->initial_commit) {
-		applyrules(c);
-		client_set_scale(client_surface(c), monitor.wlr_output->scale);
+		c->mon = &monitor;
+		c->tags = monitor.tagset[monitor.seltags];
+		resize(c, c->geom);
+		setfullscreen(c, c->isfullscreen);
+		
+		client_set_scale(client_surface(c), 1.0f);
 		wlr_xdg_toplevel_set_wm_capabilities(c->surface.xdg->toplevel, WLR_XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
 		if (c->decoration) requestdecorationmode(&c->set_decoration_mode, c->decoration);
 		wlr_xdg_toplevel_set_size(c->surface.xdg->toplevel, 0, 0);
@@ -770,37 +724,13 @@ void createpointer(struct wlr_pointer *pointer) {
 	wlr_cursor_attach_input_device(cursor, &pointer->base);
 }
 
-void createpointerconstraint(struct wl_listener *listener, void *data) {
-	PointerConstraint *pointer_constraint = ecalloc(1, sizeof(*pointer_constraint));
-	pointer_constraint->constraint = data;
-	LISTEN(&pointer_constraint->constraint->events.destroy, &pointer_constraint->destroy, destroypointerconstraint);
-}
-
 void createpopup(struct wl_listener *listener, void *data) {
 	struct wlr_xdg_popup *popup = data;
 	LISTEN_STATIC(&popup->base->surface->events.commit, commitpopup);
 }
 
-void cursorconstrain(struct wlr_pointer_constraint_v1 *constraint) {
-	if (active_constraint == constraint) return;
-	if (active_constraint) wlr_pointer_constraint_v1_send_deactivated(active_constraint);
-	active_constraint = constraint;
-	wlr_pointer_constraint_v1_send_activated(constraint);
-}
-
 void cursorframe(struct wl_listener *listener, void *data) {
 	wlr_seat_pointer_notify_frame(seat);
-}
-
-void cursorwarptohint(void) {
-	Client *c = NULL;
-	double sx = active_constraint->current.cursor_hint.x;
-	double sy = active_constraint->current.cursor_hint.y;
-	toplevel_from_wlr_surface(active_constraint->surface, &c, NULL);
-	if (c && active_constraint->current.cursor_hint.enabled) {
-		wlr_cursor_warp(cursor, NULL, sx + c->geom.x + c->bw, sy + c->geom.y + c->bw);
-		wlr_seat_pointer_warp(active_constraint->seat, sx, sy);
-	}
 }
 
 void destroydecoration(struct wl_listener *listener, void *data) {
@@ -837,16 +767,6 @@ void destroynotify(struct wl_listener *listener, void *data) {
 	wl_list_remove(&c->unmap.link);
 	wl_list_remove(&c->maximize.link);
 	free(c);
-}
-
-void destroypointerconstraint(struct wl_listener *listener, void *data) {
-	PointerConstraint *pointer_constraint = wl_container_of(listener, pointer_constraint, destroy);
-	if (active_constraint == pointer_constraint->constraint) {
-		cursorwarptohint();
-		active_constraint = NULL;
-	}
-	wl_list_remove(&pointer_constraint->destroy.link);
-	free(pointer_constraint);
 }
 
 void destroykeyboardgroup(struct wl_listener *listener, void *data) {
@@ -1070,10 +990,11 @@ void mapnotify(struct wl_listener *listener, void *data) {
 		c->mon = &monitor;
 		c->tags = p->tags;
 	} else {
-		applyrules(c);
+		c->mon = &monitor;
+		c->tags = monitor.tagset[monitor.seltags];
 	}
 
-  focusclient(c, 1);
+	focusclient(c, 1);
 	arrange(&monitor);
 	printstatus();
 
@@ -1100,17 +1021,17 @@ void motionabsolute(struct wl_listener *listener, void *data) {
 }
 
 void motionnotify(uint32_t time, struct wlr_input_device *device, double dx, double dy, double dx_unaccel, double dy_unaccel) {
-	double sx = 0, sy = 0, sx_confined, sy_confined;
+	double sx = 0, sy = 0;
 	Client *c = NULL, *w = NULL;
 	LayerSurface *l = NULL;
 	struct wlr_surface *surface = NULL;
-	struct wlr_pointer_constraint_v1 *constraint;
-  wl_event_source_timer_update(cursor_hide_timer,CURSOR_HIDE_TIMEOUT);
 
-  if (cursor_hidden) {
-    cursor_hidden = 0;
-    wlr_cursor_set_xcursor(cursor, cursor_mgr, "default");
-  }
+	wl_event_source_timer_update(cursor_hide_timer, CURSOR_HIDE_TIMEOUT);
+
+	if (cursor_hidden) {
+		cursor_hidden = 0;
+		wlr_cursor_set_xcursor(cursor, cursor_mgr, "default");
+	}
 
 	xytonode(cursor->x, cursor->y, &surface, &c, NULL, &sx, &sy);
 
@@ -1123,20 +1044,6 @@ void motionnotify(uint32_t time, struct wlr_input_device *device, double dx, dou
 
 	if (time) {
 		wlr_relative_pointer_manager_v1_send_relative_motion(relative_pointer_mgr, seat, (uint64_t)time * 1000, dx, dy, dx_unaccel, dy_unaccel);
-		wl_list_for_each(constraint, &pointer_constraints->constraints, link) cursorconstrain(constraint);
-
-		if (active_constraint) {
-			toplevel_from_wlr_surface(active_constraint->surface, &c, NULL);
-			if (c && active_constraint->surface == seat->pointer_state.focused_surface) {
-				sx = cursor->x - c->geom.x - c->bw;
-				sy = cursor->y - c->geom.y - c->bw;
-				if (wlr_region_confine(&active_constraint->region, sx, sy, sx + dx, sy + dy, &sx_confined, &sy_confined)) {
-					dx = sx_confined - sx;
-					dy = sy_confined - sy;
-				}
-				if (active_constraint->type == WLR_POINTER_CONSTRAINT_V1_LOCKED) return;
-			}
-		}
 		wlr_cursor_move(cursor, device, dx, dy);
 	}
 
@@ -1300,12 +1207,6 @@ void setcursor(struct wl_listener *listener, void *data) {
 	if (event->seat_client == seat->pointer_state.focused_client) wlr_cursor_set_surface(cursor, event->surface, event->hotspot_x, event->hotspot_y);
 }
 
-void setcursorshape(struct wl_listener *listener, void *data) {
-	struct wlr_cursor_shape_manager_v1_request_set_shape_event *event = data;
-	if (cursor_mode != CurNormal && cursor_mode != CurPressed) return;
-	if (event->seat_client == seat->pointer_state.focused_client) wlr_cursor_set_xcursor(cursor, cursor_mgr, wlr_cursor_shape_v1_name(event->shape));
-}
-
 void setfullscreen(Client *c, int fullscreen) {
 	c->isfullscreen = fullscreen;
 	if (!client_surface(c)->mapped) return;
@@ -1321,11 +1222,6 @@ void setfullscreen(Client *c, int fullscreen) {
 	}
 	arrange(&monitor);
 	printstatus();
-}
-
-void setpsel(struct wl_listener *listener, void *data) {
-	struct wlr_seat_request_set_primary_selection_event *event = data;
-	wlr_seat_set_primary_selection(seat, event->source, event->serial);
 }
 
 void setsel(struct wl_listener *listener, void *data) {
@@ -1373,10 +1269,8 @@ void setup(void) {
 	
 	wlr_data_control_manager_v1_create(dpy);
 	wlr_ext_data_control_manager_v1_create(dpy, 1);
-	wlr_primary_selection_v1_device_manager_create(dpy);
 	wlr_viewporter_create(dpy);
 	wlr_single_pixel_buffer_manager_v1_create(dpy);
-	wlr_fractional_scale_manager_v1_create(dpy, 1);
 	wlr_presentation_create(dpy, backend, 2);
 	wlr_alpha_modifier_v1_create(dpy);
 
@@ -1385,15 +1279,15 @@ void setup(void) {
 
 	output_layout = wlr_output_layout_create(dpy);
 	wl_signal_add(&output_layout->events.change, &layout_change);
-  wlr_xdg_output_manager_v1_create(dpy, output_layout);
-  wlr_screencopy_manager_v1_create(dpy);
+	wlr_xdg_output_manager_v1_create(dpy, output_layout);
+	wlr_screencopy_manager_v1_create(dpy);
 
 	wl_signal_add(&backend->events.new_output, &new_output);
 
 	wl_list_init(&clients);
 	wl_list_init(&fstack);
 
-  cursor_hide_timer = wl_event_loop_add_timer(event_loop, hidecursor, NULL);
+	cursor_hide_timer = wl_event_loop_add_timer(event_loop, hidecursor, NULL);
 
 	xdg_shell = wlr_xdg_shell_create(dpy, 6);
 	wl_signal_add(&xdg_shell->events.new_toplevel, &new_xdg_toplevel);
@@ -1405,9 +1299,6 @@ void setup(void) {
 	wlr_server_decoration_manager_set_default_mode(wlr_server_decoration_manager_create(dpy), WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
 	xdg_decoration_mgr = wlr_xdg_decoration_manager_v1_create(dpy);
 	wl_signal_add(&xdg_decoration_mgr->events.new_toplevel_decoration, &new_xdg_decoration);
-
-	pointer_constraints = wlr_pointer_constraints_v1_create(dpy);
-	wl_signal_add(&pointer_constraints->events.new_constraint, &new_pointer_constraint);
 
 	relative_pointer_mgr = wlr_relative_pointer_manager_v1_create(dpy);
 
@@ -1422,15 +1313,11 @@ void setup(void) {
 	wl_signal_add(&cursor->events.axis, &cursor_axis);
 	wl_signal_add(&cursor->events.frame, &cursor_frame);
 
-	cursor_shape_mgr = wlr_cursor_shape_manager_v1_create(dpy, 1);
-	wl_signal_add(&cursor_shape_mgr->events.request_set_shape, &request_set_cursor_shape);
-
 	wl_signal_add(&backend->events.new_input, &new_input_device);
 
 	seat = wlr_seat_create(dpy, "seat0");
 	wl_signal_add(&seat->events.request_set_cursor, &request_cursor);
 	wl_signal_add(&seat->events.request_set_selection, &request_set_sel);
-	wl_signal_add(&seat->events.request_set_primary_selection, &request_set_psel);
 	wl_signal_add(&seat->events.request_start_drag, &request_start_drag);
 	wl_signal_add(&seat->events.start_drag, &start_drag);
 
@@ -1536,7 +1423,7 @@ void unmapnotify(struct wl_listener *listener, void *data) {
 		wl_list_remove(&c->link);
 		c->mon = NULL;
 		wl_list_remove(&c->flink);
-    focusclient(focustop(&monitor), 1);
+		focusclient(focustop(&monitor), 1);
 		arrange(&monitor);
 	}
 	wlr_scene_node_destroy(&c->scene->node);
