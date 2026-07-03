@@ -279,6 +279,7 @@ static void xytonode(double x, double y, struct wlr_surface **psurface,
 
 static pid_t child_pid = -1;
 static void *exclusive_focus;
+static struct wl_event_source *cursor_hide_timer;
 static struct wl_display *dpy;
 static struct wl_event_loop *event_loop;
 static struct wlr_backend *backend;
@@ -318,6 +319,9 @@ static struct wlr_box sgeom;
 static Monitor monitor;
 static int mon_init = 0;
 #define selmon (&monitor)
+
+static int cursor_hidden = 0;
+#define CURSOR_HIDE_TIMEOUT 1000
 
 static struct wl_listener cursor_axis = {.notify = axisnotify};
 static struct wl_listener cursor_button = {.notify = buttonpress};
@@ -401,6 +405,14 @@ void arrange(Monitor *m) {
 
 	if (m->lt[m->sellt]->arrange) m->lt[m->sellt]->arrange(m);
 	motionnotify(0, NULL, 0, 0, 0, 0);
+}
+
+static int hidecursor(void *data){
+    if (cursor_hidden)
+        return 0;
+    cursor_hidden = 1;
+    wlr_cursor_set_surface(cursor, NULL, 0, 0);
+    return 0;
 }
 
 void autostart(void) {
@@ -1120,6 +1132,12 @@ void motionnotify(uint32_t time, struct wlr_input_device *device, double dx, dou
 	LayerSurface *l = NULL;
 	struct wlr_surface *surface = NULL;
 	struct wlr_pointer_constraint_v1 *constraint;
+  wl_event_source_timer_update(cursor_hide_timer,CURSOR_HIDE_TIMEOUT);
+
+  if (cursor_hidden) {
+    cursor_hidden = 0;
+    wlr_cursor_set_xcursor(cursor, cursor_mgr, "default");
+  }
 
 	xytonode(cursor->x, cursor->y, &surface, &c, NULL, &sx, &sy);
 
@@ -1414,6 +1432,8 @@ void setup(void) {
 
 	wl_list_init(&clients);
 	wl_list_init(&fstack);
+
+  cursor_hide_timer = wl_event_loop_add_timer(event_loop, hidecursor, NULL);
 
 	xdg_shell = wlr_xdg_shell_create(dpy, 6);
 	wl_signal_add(&xdg_shell->events.new_toplevel, &new_xdg_toplevel);
