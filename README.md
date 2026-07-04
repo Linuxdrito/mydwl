@@ -49,26 +49,18 @@ Un fork minimalista y despojado de **dwl**, pensado para correr exactamente una 
 | `libinput`, `xkbcommon` (runtime) | Entrada de teclado/mouse en ejecución |
 | Un gestor de sesión/seat (`seatd` o `logind`) | Acceso a DRM/input sin root |
 
-### Opcionales
-
-| Dependencia | Uso |
-|---|---|
-| Tema de cursores Xcursor instalado | El compositor usa `wlr_xcursor_manager_create(NULL, 24)`, que recurre al tema por defecto del sistema |
-| Herramientas de captura compatibles con `wlr-screencopy`/`export-dmabuf` (p. ej. `grim`) | Consumidoras de los protocolos de captura ya expuestos por el compositor |
-| Cliente de portapapeles compatible con `wl-data-control` (p. ej. `wl-clipboard`) | Consumidor del protocolo de portapapeles ya expuesto |
-
 ## Instalación
 
 ```sh
 # 1. Clonar el repositorio
-git clone <url-del-repositorio> mydwl
+git clone <https://github.com/Linuxdrito/mydwl.git>
 cd mydwl
 
 # 2. Compilar
 make
 
 # 3. Instalar (requiere permisos para escribir en $PREFIX, por defecto /usr/local)
-sudo make install   # o `doas make install` si se usa doas en vez de sudo
+sudo make install
 
 # 4. Ejecutar
 dbus-run-session mydwl
@@ -78,8 +70,6 @@ dbus-run-session mydwl
 ## Configuración
 
 Este proyecto **no tiene archivo de configuración externo**: todo se define en `config.h` (generado a partir de `config.def.h`), un archivo de código C que se compila directamente dentro del binario.
-
-> ⚠️ **Importante:** si vas a modificar aplicaciones por defecto, atajos de teclado, comandos, procesos de autostart, distribución del teclado, comportamiento del monitor o cualquier otro aspecto de configuración, **debes hacerlo editando `config.def.h` (o `config.h`) antes de compilar**. Una vez compilado el binario, esos valores quedan fijos hasta que se vuelva a ejecutar `make` (y `make install`).
 
 Flujo recomendado para aplicar cambios:
 
@@ -91,12 +81,12 @@ sudo make install
 
 ## Aplicaciones que inicia automáticamente
 
-| Programa | Función | Comentarios |
-|---|---|---|
-| `pipewire` | Servidor de audio/video multimedia | Sin argumentos |
-| `wireplumber` | Gestor de sesión de PipeWire | Sin argumentos |
-| `pipewire-pulse` | Capa de compatibilidad PulseAudio sobre PipeWire | Sin argumentos |
-| `foot --server` | Servidor del emulador de terminal `foot` | Permite que `footclient` (usado en `Alt+Enter`) abra ventanas de terminal instantáneamente |
+| Programa | Función |
+|---|---|
+| `pipewire` | Servidor de audio/video multimedia |
+| `wireplumber` | Gestor de sesión de PipeWire |
+| `pipewire-pulse` | Capa de compatibilidad PulseAudio sobre PipeWire |
+| `foot --server` | Servidor del emulador de terminal `foot` |
 
 Todos se lanzan al arrancar el compositor (`autostart()`), antes de entrar al bucle principal de eventos, y se les asigna `PR_SET_PDEATHSIG(SIGTERM)` para que terminen junto con el compositor.
 
