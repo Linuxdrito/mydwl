@@ -14,7 +14,7 @@ Un fork minimalista y despojado de **dwl**, pensado para correr exactamente una 
 - **Mover/redimensionar ventanas con el mouse.** El enum de modos de cursor se reduce a `CurNormal` y `CurPressed`; no hay `CurMove` ni `CurResize`, y el arreglo `buttons[]` en `config.def.h` está vacío (solo contiene una entrada nula de relleno).
 - **Ajuste de `mfact`/`nmaster` en caliente.** No hay funciones `setmfact` ni `incnmaster`, ni atajos para cambiar el factor del master o el número de clientes maestros durante la ejecución; ambos valores se fijan una sola vez en `createmon` (`mfact = 0.55f`, `nmaster = 1`).
 - **`foreign-toplevel-management`, `output-management`, `idle-inhibit`, `virtual-keyboard`, `input-method`, `tearing-control` y `pointer-gestures`.** Ninguno de estos protocolos wlroots aparece en el código; se eliminaron por no ser necesarios para el flujo de trabajo del autor (sin barras que listen ventanas, sin herramientas tipo `wlr-randr`/`kanshi`, sin inhibidores de suspensión externos).
-- **Descubrimiento automático de resolución/monitor.** En lugar de aceptar cualquier modo que el driver ofrezca, `createmon()` recorre los modos disponibles y **solo acepta uno cercano a 1920×1080 @ 48 Hz**; cualquier otra combinación provoca un `abort()` con un log de error.
+- **Descubrimiento automático de resolución/monitor.** En lugar de aceptar cualquier modo que el driver ofrezca, `createmon()` recorre los modos disponibles.
 
 ### Añadido
 
@@ -25,7 +25,6 @@ Un fork minimalista y despojado de **dwl**, pensado para correr exactamente una 
 - **Compilación agresiva para tamaño y velocidad.** El `Makefile` añade `-Os -march=native -flto -fomit-frame-pointer -ffunction-sections -fdata-sections` y enlaza con `-s -Wl,--gc-sections`, muy por encima del nivel de optimización del `config.mk` estándar de dwl.
 - **Validación estricta de la salida al arrancar.** Registra en el log (`WLR_INFO`) cada modo detectado por el monitor antes de fallar, facilitando el diagnóstico si el panel cambia.
 - **Comentarios y nombres de variables en español** en la configuración (`config.def.h`), reflejando que el proyecto está pensado para uso personal y no para distribución genérica.
-- **Comando de navegador hardcodeado con flags específicos.** `browsercmd` apunta a una ruta absoluta de un AppImage de Thorium con flags de Ozone/Wayland, VA-API y aislamiento de procesos ya fijados, sin necesidad de variables de entorno externas.
 
 ## Dependencias
 
