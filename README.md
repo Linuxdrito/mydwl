@@ -108,10 +108,10 @@ Todos se lanzan al arrancar el compositor (`autostart()`), antes de entrar al bu
 | `Alt + Shift + )` | `tag(~0)` | Envía la ventana enfocada a todas las etiquetas |
 | `Alt + Shift + Q` | `quit` | Cierra el compositor |
 | `Ctrl + Alt + Terminate_Server` | `quit` | Atajo de emergencia estándar de wlroots para terminar la sesión |
-| `Alt + 1` … `Alt + 5` | `view(tag N)` | Cambia a la etiqueta *N* (1 a 5) |
-| `Alt + Ctrl + 1` … `Alt + Ctrl + 5` | `toggleview(tag N)` | Alterna la visibilidad de la etiqueta *N* junto a la actual |
-| `Alt + Shift + !/@/#/$/%` | `tag(tag N)` | Envía la ventana enfocada a la etiqueta *N* |
-| `Alt + Ctrl + Shift + !/@/#/$/%` | `toggletag(tag N)` | Alterna la pertenencia de la ventana enfocada a la etiqueta *N* |
+| `Alt + 1 ... 5` | `view(tag N)` | Cambia a la etiqueta *N* (1 a 5) |
+| `Alt + Ctrl + 1 ... 5` | `toggleview(tag N)` | Alterna la visibilidad de la etiqueta *N* junto a la actual |
+| `Alt + Shift + 1 ... 5` | `tag(tag N)` | Envía la ventana enfocada a la etiqueta *N* |
+| `Alt + Ctrl + Shift + 1 ... 5` | `toggletag(tag N)` | Alterna la pertenencia de la ventana enfocada a la etiqueta *N* |
 | `XF86AudioRaiseVolume` | `spawn(volup)` | Sube el volumen 5% (`wpctl`) |
 | `XF86AudioLowerVolume` | `spawn(voldown)` | Baja el volumen 5% (`wpctl`) |
 | `XF86AudioMute` | `spawn(volmute)` | Alterna silencio (`wpctl`) |
