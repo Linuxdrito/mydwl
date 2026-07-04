@@ -8,6 +8,7 @@ Un fork minimalista y despojado de **dwl**, pensado para correr exactamente una 
 
 ### Eliminado
 
+- **LayerShell por completo.** No hay ni un solo #include, protocolo, LayerSurface, manager, listener, callback o lógica de composición relacionada con LayerShell. Se eliminó toda la infraestructura para superficies de capa (layer surfaces), exclusive zones y gestión específica de capas. El compositor está diseñado exclusivamente para clientes Wayland nativos (xdg_shell).
 - **XWayland por completo.** No hay ni un solo `#include` relacionado a Xwayland, ni estructuras, ni listeners, ni la unión `surface.xwayland` que existe en dwl estándar. Solo se soportan clientes Wayland nativos (`xdg_shell`).
 - **Soporte multi-monitor.** dwl original mantiene una lista dinámica de monitores (`wl_list mons`). Este fork usa una única estructura `Monitor` estática (`static Monitor monitor;` con macro `#define selmon (&monitor)`) y una bandera `mon_init` que descarta cualquier salida adicional que Wayland reporte (`if (mon_init) return;` en `createmon`).
 - **Layout flotante y alternancia de layouts.** No existe `togglefloating`, ni un arreglo de `Layout` seleccionable, ni la tecla para ciclar disposiciones. Solo existe `tile()`, sin alternativa.
