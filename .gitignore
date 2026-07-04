@@ -1,6 +1,7 @@
-dwl
+mydwl
 *.o
 *-protocol.c
 *-protocol.h
 .ccls-cache
 config.h
+.gitea/issue_template/
