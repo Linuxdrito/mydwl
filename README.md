@@ -4,37 +4,6 @@ Un fork minimalista y despojado de **dwl**, pensado para correr exactamente una 
 
 ---
 
-
-## ¿Qué es?
-
-`mydwl` es un compositor Wayland derivado de **dwl** (basado en la API de **wlroots 0.19**), reescrito y podado para eliminar todo lo que no forma parte del flujo de trabajo diario de su autor. No es un compositor "para todos": es un compositor para **una** máquina, **un** monitor y **un** conjunto de aplicaciones específico, hardcodeado directamente en el binario.
-
-El objetivo del fork no es agregar funciones nuevas de gestión de ventanas, sino **restar**: quitar XWayland, quitar el soporte multi-monitor, quitar el layout flotante, quitar cualquier lógica de "detectar y adaptarse" en favor de valores fijos y explícitos en el código fuente.
-
-- **Cero bloat.** Si una característica de dwl no se usa en el día a día, se elimina del binario, no se oculta detrás de un `#ifdef`.
-- **Configuración estática, no dinámica.** No hay archivos `.conf`, ni IPC, ni protocolo de reconfiguración en caliente. Todo vive en `config.h`, se decide en tiempo de compilación y no cambia hasta el próximo `make`.
-- **Hardcodear en vez de descubrir.** Cuando existe una única forma "correcta" de hacer algo en esta máquina (resolución de pantalla, comandos de volumen, navegador), el código la asume directamente en lugar de intentar detectarla o soportar alternativas.
-- **Un binario pequeño y predecible.** Se prioriza tamaño y arranque en frío sobre flexibilidad: flags de compilación agresivos, sin capas de compatibilidad, sin rutas de código muertas.
-- **Evita deliberadamente:** soporte para aplicaciones X11, múltiples monitores, ventanas flotantes, múltiples layouts, gestión de ventanas con el mouse (mover/redimensionar), barras de estado externas vía *foreign-toplevel*, gestión remota de salidas, e inhibidores de suspensión.
-
-## Características
-
-- **Tiling automático de una sola disposición.** Todas las ventanas se organizan en un layout maestro/pila (`tile()`); no existe alternancia de layouts ni modo flotante.
-- **Sistema de tags (5 etiquetas).** Cada ventana pertenece a un subconjunto de hasta `TAGCOUNT = 5` etiquetas, con soporte para ver, alternar visibilidad, mover ventanas entre tags y alternar tags de una ventana.
-- **Pantalla completa nativa.** Cualquier cliente puede solicitar fullscreen vía el protocolo XDG; se respeta con un fondo dedicado (`fullscreen_bg`) y sin bordes.
-- **Capa (`layer-shell`).** Soporte completo para `wlr-layer-shell-unstable-v1`, necesario para barras de estado, fondos de pantalla y overlays tipo *wofi/rofi*, organizados en las capas `Bg`, `Bottom`, `Tile`, `Top`, `Overlay` y `FS`.
-- **Decoración del lado del servidor.** Los bordes de las ventanas los dibuja el propio compositor (`wlr_server_decoration` y `xdg-decoration`, forzados a modo `SERVER_SIDE`); las ventanas no dibujan sus propias barras de título.
-- **Gestión de foco por teclado y sloppy focus opcional.** El foco sigue por defecto los clics/teclado (`sloppyfocus = 0`); puede activarse foco-sigue-al-mouse cambiando una sola constante.
-- **Ventanas urgentes.** Los clientes que se activan (`xdg-activation`) mientras no tienen foco se marcan como urgentes y cambian el color de su borde.
-- **Portapapeles y arrastre.** Soporte de `wl_data_device`, `data-control` (portapapeles programático, usado por herramientas como `wl-clipboard`) y arrastrar-y-soltar (drag & drop) con ícono de arrastre en pantalla.
-- **Captura de pantalla nativa.** Implementa `wlr_screencopy_manager_v1` y `export-dmabuf`, protocolos que utilizan herramientas como `grim`.
-- **Ocultamiento automático del cursor.** Un temporizador interno (`hidecursor`) esconde el puntero tras un segundo de inactividad y lo restaura en el primer movimiento.
-- **Grupo de teclados unificado.** Todos los teclados conectados se agrupan (`wlr_keyboard_group`) y comparten el mismo keymap, con repetición de tecla configurable (`repeat_rate`, `repeat_delay`).
-- **Configuración exhaustiva de libinput.** Tap-to-click, tap-and-drag, drag-lock, scroll natural, disable-while-typing, botón izquierdo, emulación de botón medio, método de scroll, método de clic, perfil y velocidad de aceleración: todo configurado por dispositivo apuntador al conectarse.
-- **Autostart de procesos en segundo plano.** Al iniciar, el compositor lanza automáticamente una lista fija de procesos (ver la tabla en la sección correspondiente).
-- **Reinicio de GPU en caliente.** Ante la pérdida del contexto de renderizado (`gpureset`), el compositor recrea `renderer` y `allocator` sin necesidad de reiniciar la sesión completa.
-- **Resolución de salida fijada por código.** El compositor busca explícitamente un modo de **1920×1080 a ~48 Hz** entre los modos que reporta la salida; si no lo encuentra, aborta con un mensaje de error (ver sección de diferencias).
-
 ## Diferencias respecto al dwl original
 
 ### Eliminado
@@ -57,22 +26,6 @@ El objetivo del fork no es agregar funciones nuevas de gestión de ventanas, sin
 - **Validación estricta de la salida al arrancar.** Registra en el log (`WLR_INFO`) cada modo detectado por el monitor antes de fallar, facilitando el diagnóstico si el panel cambia.
 - **Comentarios y nombres de variables en español** en la configuración (`config.def.h`), reflejando que el proyecto está pensado para uso personal y no para distribución genérica.
 - **Comando de navegador hardcodeado con flags específicos.** `browsercmd` apunta a una ruta absoluta de un AppImage de Thorium con flags de Ozone/Wayland, VA-API y aislamiento de procesos ya fijados, sin necesidad de variables de entorno externas.
-
-## Características técnicas
-
-- **Arquitectura de un solo archivo de lógica principal** (`mydwl.c`, ~1480 líneas) más `util.c/util.h` para utilidades genéricas (referenciadas por el `Makefile`, no incluidas en este análisis) y `client.h`, que aporta los *wrappers* de compatibilidad de superficie de cliente típicos de dwl.
-- **Basado en `wlroots 0.19`** vía `pkg-config`, usando la API de *scene graph* (`wlr_scene`) para todo el árbol de renderizado.
-- **Organización por capas de escena (`NUM_LAYERS`):** `LyrBg`, `LyrBottom`, `LyrTile`, `LyrTop`, `LyrFS`, `LyrOverlay`, `LyrBlock`, cada una un `wlr_scene_tree` independiente, más un árbol aparte para el ícono de arrastre.
-- **Manejo de ventanas:** cada `Client` es un `xdg_toplevel` con listeners de `commit`, `map`, `unmap`, `destroy`, `fullscreen`, `maximize` y decoración; las ventanas nuevas heredan tags de su padre si son transitorias, o del *tagset* activo del monitor.
-- **Manejo de entrada:** un único `wlr_keyboard_group` centraliza todos los teclados; el repeat se maneja con un `wl_event_source` propio (`keyrepeat`). Los punteros se configuran individualmente vía `libinput` en `createpointer()` según las constantes de `config.h`.
-- **Layout:** maestro/pila clásico de dwm/dwl (`tile()`), calculado sobre el área utilizable del monitor (`m->w`), que a su vez se recalcula cada vez que cambian las capas de `layer-shell` (`arrangelayers`).
-- **Sistema de tags:** máscara de bits de `TAGCOUNT` bits (`TAGMASK`), con `view`, `toggleview`, `tag` y `toggletag`; el monitor guarda dos *tagsets* (`tagset[2]`) para poder alternar entre la vista actual y la anterior (`seltags ^= 1`).
-- **Fullscreen:** guarda la geometría previa (`c->prev`) antes de expandir la ventana a `monitor.m`, y la restaura al salir; desactiva el borde (`bw = 0`) mientras está activo.
-- **Focus:** pila de foco (`fstack`) independiente de la lista de clientes (`clients`), de modo que `focustop()` siempre resuelve la última ventana enfocada visible en el tagset actual.
-- **Cursor:** un solo `wlr_cursor` atado al único `output_layout`; oculto automáticamente tras `CURSOR_HIDE_TIMEOUT` (1000 ms) de inactividad.
-- **Autostart:** procesos lanzados por `fork()` + `execvp()` con `setsid()` y `PR_SET_PDEATHSIG(SIGTERM)`, garantizando que no sobrevivan a la muerte del compositor.
-- **Selección de modo de salida:** iteración manual de `wlr_output_modes` buscando 1920×1080 con refresco dentro de ±2 Hz de 48 Hz; escala fijada en `1.0` y transformación `WL_OUTPUT_TRANSFORM_NORMAL`, sin lectura de EDID adicional ni lógica de HiDPI.
-- **Renderizado:** `wlr_renderer_autocreate` + `wlr_allocator_autocreate`, con soporte DMA-BUF, `linux-dmabuf-v1` y sincronización `linux-drm-syncobj-v1` cuando el backend lo permite; recreación automática ante pérdida de contexto (`gpureset`).
 
 ## Dependencias
 
@@ -111,22 +64,16 @@ El objetivo del fork no es agregar funciones nuevas de gestión de ventanas, sin
 git clone <url-del-repositorio> mydwl
 cd mydwl
 
-# 2. Generar config.h a partir de config.def.h (solo la primera vez)
-cp config.def.h config.h
-# (el propio Makefile lo hace automáticamente si config.h no existe)
-
-# 3. Compilar
+# 2. Compilar
 make
 
-# 4. Instalar (requiere permisos para escribir en $PREFIX, por defecto /usr/local)
+# 3. Instalar (requiere permisos para escribir en $PREFIX, por defecto /usr/local)
 sudo make install   # o `doas make install` si se usa doas en vez de sudo
 
-# 5. Ejecutar
-mydwl
-# también disponible como entrada de sesión Wayland: "mydwl" en el gestor de acceso
+# 4. Ejecutar
+dbus-run-session mydwl
 ```
 
-> **Nota sobre `make uninstall`:** el objetivo `uninstall` del `Makefile` tal como está escrito no incluye el comando de borrado antes de la ruta del archivo `.desktop`; conviene revisarlo/completarlo manualmente antes de confiar en él.
 
 ## Configuración
 
@@ -137,7 +84,6 @@ Este proyecto **no tiene archivo de configuración externo**: todo se define en 
 Flujo recomendado para aplicar cambios:
 
 ```sh
-$EDITOR config.def.h   # o config.h si ya existe
 make clean
 make
 sudo make install
