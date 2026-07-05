@@ -1139,24 +1139,28 @@ void tag(const Arg *arg) {
 void tile(Monitor *m) {
 	unsigned int mw, my, ty;
 	int i, n = 0;
+	int ow, oh;
 	Client *c;
 
 	wl_list_for_each(c, &clients, link)
 		if (VISIBLEON(c, m) && !c->isfullscreen) n++;
 	if (n == 0) return;
 
-	if (n > m->nmaster) mw = m->nmaster ? (int)roundf(m->m.width * m->mfact) : 0;
-	else mw = m->m.width;
-	
+	ow = m->m.width;
+	oh = m->m.height;
+
+	if (n > m->nmaster) mw = m->nmaster ? (int)roundf((ow - inner_gap) * m->mfact) : 0;
+	else mw = ow;
+
 	i = my = ty = 0;
 	wl_list_for_each(c, &clients, link) {
 		if (!VISIBLEON(c, m) || c->isfullscreen) continue;
 		if (i < m->nmaster) {
-			resize(c, (struct wlr_box){.x = m->m.x, .y = m->m.y + my, .width = mw, .height = (m->m.height - my) / (MIN(n, m->nmaster) - i)});
-			my += c->geom.height;
+			resize(c, (struct wlr_box){.x = m->m.x, .y = m->m.y + my, .width = mw, .height = (oh - my - (MIN(n, m->nmaster) - i - 1) * inner_gap) / (MIN(n, m->nmaster) - i)});
+			my += c->geom.height + inner_gap;
 		} else {
-			resize(c, (struct wlr_box){.x = m->m.x + mw, .y = m->m.y + ty, .width = m->m.width - mw, .height = (m->m.height - ty) / (n - i)});
-			ty += c->geom.height;
+			resize(c, (struct wlr_box){.x = m->m.x + mw + (m->nmaster ? inner_gap : 0), .y = m->m.y + ty, .width = ow - mw - (m->nmaster ? inner_gap : 0), .height = (oh - ty - (n - i - 1) * inner_gap) / (n - i)});
+			ty += c->geom.height + inner_gap;
 		}
 		i++;
 	}

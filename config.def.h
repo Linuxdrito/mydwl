@@ -6,7 +6,8 @@
 /* appearance */
 static const int sloppyfocus               = 0;  /* El mouse cambia el focus de las ventanas */
 static const int bypass_surface_visibility = 0;  /* 1 means idle inhibitors will disable idle tracking even if it's surface isn't visible  */
-static const unsigned int borderpx         = 2;  /* bordes de las ventanas */
+static const int inner_gap                 = 8;                    /* gaps entre ventanas */
+static const unsigned int borderpx         = 1;  /* bordes de las ventanas */
 static const float rootcolor[]             = COLOR(0x000000ff);
 static const float bordercolor[]           = COLOR(0x666666ff);
 static const float focuscolor[]            = COLOR(0xffffffff);
