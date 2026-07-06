@@ -174,6 +174,7 @@ static void motionabsolute(struct wl_listener *listener, void *data);
 static void motionnotify(uint32_t time, struct wlr_input_device *device, double sx,
 		double sy, double sx_unaccel, double sy_unaccel);
 static void motionrelative(struct wl_listener *listener, void *data);
+static void movestack(const Arg *arg);
 static void pointerfocus(Client *c, struct wlr_surface *surface,
 		double sx, double sy, uint32_t time);
 static void quit(const Arg *arg);
@@ -892,6 +893,34 @@ void pointerfocus(Client *c, struct wlr_surface *surface, double sx, double sy, 
 
 	wlr_seat_pointer_notify_enter(seat, surface, sx, sy);
 	wlr_seat_pointer_notify_motion(seat, time, sx, sy);
+}
+
+void movestack(const Arg *arg) {
+	Client *c = NULL, *sel = focustop(&monitor);
+	
+	if (!sel || (sel->isfullscreen && !client_has_children(sel))) return;
+
+	if (arg->i > 0) {
+		wl_list_for_each(c, &sel->link, link) {
+			if (&c->link == &clients) continue;
+			if (VISIBLEON(c, &monitor)) break;
+		}
+	} else {
+		wl_list_for_each_reverse(c, &sel->link, link) {
+			if (&c->link == &clients) continue;
+			if (VISIBLEON(c, &monitor)) break;
+		}
+	}
+
+	if (c && c != sel) {
+		wl_list_remove(&sel->link);
+		if (arg->i > 0) {
+			wl_list_insert(&c->link, &sel->link);
+		} else {
+			wl_list_insert(c->link.prev, &sel->link);
+		}
+		arrange(&monitor);
+	}
 }
 
 void quit(const Arg *arg) {

@@ -96,7 +96,7 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 /* helper for spawning shell commands in the pre dwm-5.0 fashion */
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
 
-/* commands */
+/* commandos we */
 static const char *termcmd[] = { "footclient", NULL };
 static const char *browsercmd[] = { "/home/pedrito/thorium-browser.AppImage", "--enable-features=UseOzonePlatform", "--ozone-platform=wayland", "--use-gl=angle", "--enable-features=VaapiVideoDecoder", "--ignore-gpu-blocklist", "--disbale-features=UseChromeOSDirectVideoDecoder" , "--process-per-site" , "--disable-background-networking" ,NULL };
 static const char *volup[]    = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%+", NULL };
@@ -111,6 +111,8 @@ static const Button buttons[] = {
 	/* modifier                  button               function        argument */
 	{ 0,                         0,                   NULL,           {0} },
 };
+
+/* programas al inicio */
 
 static const char *const autostart_cmds[][3] = {
 	{"pipewire", NULL}, {"wireplumber", NULL},
@@ -133,6 +135,10 @@ static const Key keys[] = {
 	{ MODKEY,                    XKB_KEY_Up,                      focusstack,         {.i = -1} },
 	{ MODKEY,                    XKB_KEY_Left,                    focusstack,         {.i = -1} },
   { MODKEY,                    XKB_KEY_Right,                   focusstack,         {.i = +1} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Left,                    movestack,          {.i = -1} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Right,                   movestack,          {.i = +1} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Up,                      movestack,          {.i = -1} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Down,                    movestack,          {.i = +1} },
   { MODKEY,                    XKB_KEY_q,                       killclient,         {0} },
 	{ MODKEY,                    XKB_KEY_f,                       togglefullscreen,   {0} },
 	{ MODKEY,                    XKB_KEY_0,                       view,               {.ui = ~0} },
