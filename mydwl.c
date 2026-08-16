@@ -16,7 +16,6 @@
 #include <wlr/backend/libinput.h>
 #include <wlr/render/allocator.h>
 #include <wlr/render/wlr_renderer.h>
-#include <wlr/types/wlr_alpha_modifier_v1.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_control_v1.h>
@@ -32,7 +31,6 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_pointer.h>
-#include <wlr/types/wlr_presentation_time.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_screencopy_v1.h>
@@ -1205,8 +1203,6 @@ void setup(void) {
   wlr_ext_data_control_manager_v1_create(dpy, 1);
   wlr_viewporter_create(dpy);
   wlr_single_pixel_buffer_manager_v1_create(dpy);
-  wlr_presentation_create(dpy, backend, 2);
-  wlr_alpha_modifier_v1_create(dpy);
 
   activation = wlr_xdg_activation_v1_create(dpy);
   wl_signal_add(&activation->events.request_activate, &request_activate);

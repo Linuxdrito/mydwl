@@ -123,10 +123,9 @@ static const char *brightdn[] = {"brightnessctl", "set", "5%-", NULL};
 static const char *screenshotcmd[] = {"/home/pedrito/screenshot.sh", NULL};
 static const char *moodnight[] = {"brightnessctl", "set", "1", NULL};
 
-static const Button buttons[] =
-    {
-        /* modifier                  button               function argument */
-        {0, 0, NULL, {0}},
+static const Button buttons[] = {
+    /* modifier                  button               function argument */
+    {0, 0, NULL, {0}},
 };
 
 /* programas al inicio */
