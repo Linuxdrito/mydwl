@@ -80,8 +80,7 @@ static const double accel_speed = 0.0;
 LIBINPUT_CONFIG_TAP_MAP_LRM -- 1/2/3 finger tap maps to left/right/middle
 LIBINPUT_CONFIG_TAP_MAP_LMR -- 1/2/3 finger tap maps to left/middle/right
 */
-static const enum libinput_config_tap_button_map button_map =
-    LIBINPUT_CONFIG_TAP_MAP_LRM;
+static const enum libinput_config_tap_button_map button_map =LIBINPUT_CONFIG_TAP_MAP_LRM;
 
 /* If you want to use the windows key for MODKEY, use WLR_MODIFIER_LOGO */
 #define MODKEY WLR_MODIFIER_ALT
@@ -104,21 +103,19 @@ static const enum libinput_config_tap_button_map button_map =
 /* commandos we */
 static const char *termcmd[] = {"footclient", NULL};
 static const char *browsercmd[] = {"firefox", NULL};
-static const char *volup[] = {"wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@",
-                              "5%+", NULL};
-static const char *voldown[] = {"wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@",
-                                "5%-", NULL};
-static const char *volmute[] = {"wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@",
-                                "toggle", NULL};
-static const char *brightup[] = {"brightnessctl", "set", "5%+", NULL};
-static const char *brightdn[] = {"brightnessctl", "set", "5%-", NULL};
+static const char *volup[] = {"wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@","5%+", NULL};
+static const char *voldown[] = {"wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@","5%-", NULL};
+static const char *volmute[] = {"wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@","toggle", NULL};
+
+static const char *brightup[] = {"bst", "500", NULL};
+static const char *brightdn[] = {"bst", "100", NULL};
 static const char *screenshotcmd[] = {"/home/pedrito/screenshot.sh", NULL};
-static const char *moodnight[] = {"brightnessctl", "set", "1", NULL};
+static const char *moodnight[] = {"bst", "1", NULL};
 
 static const Button buttons[] = {
-    /* modifier                  button               function argument */
-    {0, 0, NULL, {0}},
-};
+        /* modifier                  button               function argument */
+        {0, 0, NULL, {0}},
+    };
 
 /* programas al inicio */
 
