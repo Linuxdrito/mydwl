@@ -107,8 +107,8 @@ static const char *volup[] = {"wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@","5%+
 static const char *voldown[] = {"wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@","5%-", NULL};
 static const char *volmute[] = {"wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@","toggle", NULL};
 
-static const char *brightup[] = {"bst", "500", NULL};
-static const char *brightdn[] = {"bst", "100", NULL};
+static const char *brightup[] = {"bst", "800", NULL};
+static const char *brightdn[] = {"bst", "0", NULL};
 static const char *screenshotcmd[] = {"/home/pedrito/screenshot.sh", NULL};
 static const char *moodnight[] = {"bst", "1", NULL};
 
