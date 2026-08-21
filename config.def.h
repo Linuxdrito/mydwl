@@ -1,4 +1,3 @@
-/* Taken from https://github.com/djpohly/dwl/issues/466 */
 #define COLOR(hex)                                                             \
   {((hex >> 24) & 0xFF) / 255.0f, ((hex >> 16) & 0xFF) / 255.0f,               \
    ((hex >> 8) & 0xFF) / 255.0f, (hex & 0xFF) / 255.0f}
@@ -7,7 +6,7 @@ static const int sloppyfocus = 0; /* El mouse cambia el focus de las ventanas */
 static const int bypass_surface_visibility =
     0; /* 1 means idle inhibitors will disable idle tracking even if it's
           surface isn't visible  */
-static const int inner_gap = 8;         /* gaps entre ventanas */
+static const int inner_gap = 5;         /* gaps entre ventanas */
 static const unsigned int borderpx = 1; /* bordes de las ventanas */
 static const float rootcolor[] = COLOR(0x000000ff);
 static const float bordercolor[] = COLOR(0x666666ff);
@@ -25,14 +24,6 @@ static const float fullscreen_bg[] = {0.1f, 0.1f, 0.1f,
 /* logging */
 static int log_level = WLR_ERROR;
 
-/* NOTE: ALWAYS keep a rule declared even if you don't use rules (e.g leave at
- * least one example) */
-
-/* monitors */
-/* (x=-1, y=-1) is reserved as an "autoconfigure" monitor position indicator
- * WARNING: negative values other than (-1, -1) cause problems with Xwayland
- * clients https://gitlab.freedesktop.org/xorg/xserver/-/issues/899
- */
 /* keyboard */
 static const struct xkb_rule_names xkb_rules = {
     /* can specify fields: rules, model, layout, variant, options */
