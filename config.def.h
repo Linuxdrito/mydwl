@@ -13,6 +13,7 @@ static const float rootcolor[] = COLOR(0x000000ff);
 static const float bordercolor[] = COLOR(0x666666ff);
 static const float focuscolor[] = COLOR(0xffffffff);
 static const float urgentcolor[] = COLOR(0xff0000ff);
+static const char wallpaper_path[] = "/home/pedrito/.config/mango/catpaper.jpg";
 /* This conforms to the xdg-protocol. Set the alpha to zero to restore the old
  * behavior */
 static const float fullscreen_bg[] = {0.1f, 0.1f, 0.1f,

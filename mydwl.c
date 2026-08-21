@@ -268,6 +268,9 @@ static struct wl_listener start_drag = {.notify = startdrag};
 
 #include "client.h"
 #include "config.h"
+#include "wallpaper.h"
+
+static struct wlr_scene_node *wallpaper;
 
 void applybounds(Client *c, struct wlr_box *bbox) {
   c->geom.width = MAX(1 + 2 * (int)c->bw, c->geom.width);
@@ -1180,6 +1183,8 @@ void setup(void) {
     die("couldn't create renderer");
   wl_signal_add(&drw->events.lost, &gpu_reset);
 
+  wallpaper = wallpaper_create(layers[LyrBg], drw, wallpaper_path);
+
   wlr_renderer_init_wl_shm(drw, dpy);
   if (wlr_renderer_get_texture_formats(drw, WLR_BUFFER_CAP_DMABUF)) {
     wlr_drm_create(dpy, drw);
@@ -1369,8 +1374,11 @@ void updatemons(struct wl_listener *listener, void *data) {
     return;
 
   wlr_output_layout_get_box(output_layout, NULL, &sgeom);
+
   wlr_scene_node_set_position(&root_bg->node, sgeom.x, sgeom.y);
   wlr_scene_rect_set_size(root_bg, sgeom.width, sgeom.height);
+  wlr_scene_node_set_position(wallpaper, sgeom.x, sgeom.y);
+  wallpaper_resize(wallpaper, sgeom.width, sgeom.height);
 
   wlr_output_layout_get_box(output_layout, monitor.wlr_output, &monitor.m);
   wlr_scene_output_set_position(monitor.scene_output, monitor.m.x, monitor.m.y);
@@ -1423,10 +1431,13 @@ void xytonode(double x, double y, struct wlr_surface **psurface, Client **pc,
   for (layer = NUM_LAYERS - 1; !surface && layer >= 0; layer--) {
     if (!(node = wlr_scene_node_at(&layers[layer]->node, x, y, nx, ny)))
       continue;
-    if (node->type == WLR_SCENE_NODE_BUFFER)
-      surface =
-          wlr_scene_surface_try_from_buffer(wlr_scene_buffer_from_node(node))
-              ->surface;
+    if (node->type == WLR_SCENE_NODE_BUFFER) {
+      struct wlr_scene_surface *scene_surf =
+          wlr_scene_surface_try_from_buffer(wlr_scene_buffer_from_node(node));
+      if (scene_surf) {
+        surface = scene_surf->surface;
+      }
+    }
     for (pnode = node; pnode && !c; pnode = &pnode->parent->node)
       c = pnode->data;
   }

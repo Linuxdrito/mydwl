@@ -25,11 +25,11 @@ LDFLAGS   = -s
 LDLIBS    = `$(PKG_CONFIG) --libs $(PKGS)` $(WLR_LIBS) -Wl,--gc-section -lm $(LIBS)
 
 all: mydwl
-mydwl: mydwl.o util.o
-	$(CC) mydwl.o util.o $(DWLCFLAGS) $(LDFLAGS) $(LDLIBS) -o $@
-mydwl.o: mydwl.c client.h config.h cursor-shape-v1-protocol.h \
-	pointer-constraints-unstable-v1-protocol.h xdg-shell-protocol.h
+mydwl: mydwl.o util.o wallpaper.o
+	$(CC) mydwl.o util.o wallpaper.o $(DWLCFLAGS) $(LDFLAGS) $(LDLIBS) -o $@
+mydwl.o: mydwl.c client.h config.h cursor-shape-v1-protocol.h pointer-constraints-unstable-v1-protocol.h xdg-shell-protocol.h wallpaper.h
 util.o: util.c util.h
+wallpaper.o: wallpaper.c wallpaper.h util.h stb_image.h
 
 # wayland-scanner is a tool which generates C headers and rigging for Wayland
 # protocols, which are specified in XML. wlroots requires you to rig these up
@@ -55,7 +55,7 @@ clean:
 dist: clean
 	mkdir -p mydwl-$(VERSION)
 	cp -R Makefile client.h config.def.h \
-		config.mk mydwl.c util.c util.h dwl.desktop \
+		config.mk mydwl.c util.c util.h dwl.desktop wallpaper.c wallpaper.h stb_image.h \
 		mydwl-$(VERSION)
 	tar -caf dwl-$(VERSION).tar.gz dwl-$(VERSION)
 	rm -rf mydwl-$(VERSION)
