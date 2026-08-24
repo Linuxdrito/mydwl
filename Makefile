@@ -20,7 +20,7 @@ DWLCPPFLAGS = -I. -DWLR_USE_UNSTABLE -D_POSIX_C_SOURCE=200809L -DVERSION=\"$(VER
 
 # CFLAGS / LDFLAGS
 PKGS      = wayland-server xkbcommon libinput
-DWLCFLAGS = -Os -march=native -flto -fomit-frame-pointer -ffunction-sections -fdata-sections `$(PKG_CONFIG) --cflags $(PKGS)` $(WLR_INCS) $(DWLCPPFLAGS) $(CFLAGS)
+DWLCFLAGS = -O3 -march=native -flto -fomit-frame-pointer -ffunction-sections -fdata-sections `$(PKG_CONFIG) --cflags $(PKGS)` $(WLR_INCS) $(DWLCPPFLAGS) $(CFLAGS)
 LDFLAGS   = -s
 LDLIBS    = `$(PKG_CONFIG) --libs $(PKGS)` $(WLR_LIBS) -Wl,--gc-section -lm $(LIBS)
 
@@ -31,9 +31,6 @@ mydwl.o: mydwl.c client.h config.h cursor-shape-v1-protocol.h pointer-constraint
 util.o: util.c util.h
 wallpaper.o: wallpaper.c wallpaper.h util.h stb_image.h
 
-# wayland-scanner is a tool which generates C headers and rigging for Wayland
-# protocols, which are specified in XML. wlroots requires you to rig these up
-# to your build system yourself and provide them in the include path.
 WAYLAND_SCANNER   = `$(PKG_CONFIG) --variable=wayland_scanner wayland-scanner`
 WAYLAND_PROTOCOLS = `$(PKG_CONFIG) --variable=pkgdatadir wayland-protocols`
 
@@ -52,24 +49,11 @@ config.h:
 clean:
 	rm -f mydwl *.o *-protocol.h config.h
 
-dist: clean
-	mkdir -p mydwl-$(VERSION)
-	cp -R Makefile client.h config.def.h \
-		config.mk mydwl.c util.c util.h dwl.desktop wallpaper.c wallpaper.h stb_image.h \
-		mydwl-$(VERSION)
-	tar -caf dwl-$(VERSION).tar.gz dwl-$(VERSION)
-	rm -rf mydwl-$(VERSION)
-
 install: mydwl
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
 	rm -f $(DESTDIR)$(PREFIX)/bin/mydwl
 	cp -f mydwl $(DESTDIR)$(PREFIX)/bin
 	chmod 755 $(DESTDIR)$(PREFIX)/bin/mydwl
-	mkdir -p $(DESTDIR)$(DATADIR)/wayland-sessions
-	cp -f dwl.desktop $(DESTDIR)$(DATADIR)/wayland-sessions/mydwl.desktop
-	chmod 644 $(DESTDIR)$(DATADIR)/wayland-sessions/mydwl.desktop
-uninstall:
-		$(DESTDIR)$(DATADIR)/wayland-sessions/mydwl.desktop
 
 .SUFFIXES: .c .o
 .c.o:
