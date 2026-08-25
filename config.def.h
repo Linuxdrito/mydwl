@@ -109,7 +109,7 @@ static const char *volmute[] = {"wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@","tog
 
 static const char *brightup[] = {"bst", "800", NULL};
 static const char *brightdn[] = {"bst", "0", NULL};
-static const char *screenshotcmd[] = {"/home/pedrito/screenshot.sh", NULL};
+static const char *screenshot[] = {"shot", NULL};
 static const char *moodnight[] = {"bst", "1", NULL};
 
 static const Button buttons[] = {
@@ -137,7 +137,7 @@ static const Key keys[] = {
     {0, XKB_KEY_XF86AudioMute, spawn, {.v = volmute}},
     {0, XKB_KEY_XF86MonBrightnessUp, spawn, {.v = brightup}},
     {0, XKB_KEY_XF86MonBrightnessDown, spawn, {.v = brightdn}},
-    {0, XKB_KEY_Print, spawn, {.v = screenshotcmd}},
+    {0, XKB_KEY_Print, spawn, {.v = screenshot}},
     {MODKEY, XKB_KEY_Down, focusstack, {.i = +1}},
     {MODKEY, XKB_KEY_Up, focusstack, {.i = -1}},
     {MODKEY, XKB_KEY_Left, focusstack, {.i = -1}},
