@@ -101,13 +101,13 @@ static const enum libinput_config_tap_button_map button_map =LIBINPUT_CONFIG_TAP
   }
 
 /* commandos we */
-static const char *termcmd[] = {"footclient", NULL};
+static const char *termcmd[] = {"st-wl", NULL};
 static const char *browsercmd[] = {"firefox", NULL};
 static const char *volup[] = {"wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@","5%+", NULL};
 static const char *voldown[] = {"wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@","5%-", NULL};
 static const char *volmute[] = {"wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@","toggle", NULL};
 
-static const char *brightup[] = {"bst", "800", NULL};
+static const char *brightup[] = {"bst", "2000", NULL};
 static const char *brightdn[] = {"bst", "0", NULL};
 static const char *screenshot[] = {"shot", NULL};
 static const char *moodnight[] = {"bst", "1", NULL};
@@ -123,7 +123,6 @@ static const char *const autostart_cmds[][3] = {
     {"pipewire", NULL},
     {"wireplumber", NULL},
     {"pipewire-pulse", NULL},
-    {"foot", "--server", NULL},
 };
 
 static const Key keys[] = {
